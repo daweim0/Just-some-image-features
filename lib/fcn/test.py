@@ -342,8 +342,8 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images = None, save_image
         zero_prediction_EPE = calculate_EPE(gt_flow, np.zeros(gt_flow.shape))
 
         if calculate_EPE_all_data:
-            path_segments = str(images['image_left']).split("/")
-            print ("EPE is %7.4f for " % average_EPE) + path_segments[-3] + "/" + path_segments[-2] + "/" + path_segments[-1]
+            # path_segments = str(images['image_left']).split("/")
+            # print ("EPE is %7.4f for " % average_EPE) + path_segments[-3] + "/" + path_segments[-2] + "/" + path_segments[-1]
             EPE_list.append(average_EPE)
         else:
             predicted_flow_im = sintel_utils.sintel_compute_color(predicted_flow)
@@ -400,7 +400,7 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images = None, save_image
             plt.close('all')
     if calculate_EPE_all_data:
         average = np.mean(EPE_list)
-        print "average EPE is " + str(average) + " for entire " + str(imdb._name) + " dataset with network " + \
+        print "# average EPE is " + str(average) + " for entire " + str(imdb._name) + " dataset with network " + \
             str(weights_filename)
 
 

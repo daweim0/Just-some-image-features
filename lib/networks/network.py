@@ -100,6 +100,19 @@ class Network(object):
             self.inputs.append(layer)
         return self
 
+    def feed_additional(self, *args):
+        assert len(args)!=0
+        for layer in args:
+            if isinstance(layer, basestring):
+                try:
+                    layer = self.layers[layer]
+                    print layer
+                except KeyError:
+                    print self.layers.keys()
+                    raise KeyError('Unknown layer name fed: %s'%layer)
+            self.inputs.append(layer)
+        return self
+
     def get_output(self, layer):
         try:
             layer = self.layers[layer]

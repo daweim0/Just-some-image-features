@@ -17,7 +17,7 @@ export LD_PRELOAD=/usr/lib/libtcmalloc.so.4
   --weights data/imagenet_models/vgg16_convs.npy \
   --imdb sintel_albedo_train \
   --cfg experiments/cfgs/sintel_albedo.yml \
-  --iters 40000
+  --iters 20000
 
 if [ -f $PWD/output/sintel_albedo/sintel_albedo_val/vgg16_fcn_color_single_frame_lov_iter_40000/segmentations.pkl ]
 then

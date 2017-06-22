@@ -367,7 +367,7 @@ def train_flow(network, imdb, roidb, output_dir, pretrained_model=None, max_iter
     if cfg.LOSS_FUNC == "L2":
         loss = tf.reduce_mean(tf.sqrt(tf.reduce_sum(tf.pow(gt_flow - predicted_flow, 2), axis=3)))
     elif cfg.LOSS_FUNC == "L1":
-        loss = tf.abs(tf.reduce_mean(gt_flow - predicted_flow))
+        loss = tf.reduce_mean(tf.abs(gt_flow - predicted_flow))
     else:
         assert False, "LOSS_FUNC must be specified"
 

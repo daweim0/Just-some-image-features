@@ -22,6 +22,7 @@ import numpy as np
 import math
 # `pip install easydict` if you don't have it
 from easydict import EasyDict as edict
+import ast
 
 __C = edict()
 # Consumers can get config by:
@@ -146,7 +147,7 @@ def _merge_a_into_b(a, b):
     """Merge config dictionary a into config dictionary b, clobbering the
     options in b whenever they are also specified in a.
     """
-    if type(a) is not edict:
+    if type(a) is not edict and type(a) is not dict:
         return
 
     for k, v in a.iteritems():
@@ -161,7 +162,7 @@ def _merge_a_into_b(a, b):
                                                            type(v), k))
 
         # recursively merge dicts
-        if type(v) is edict:
+        if type(v) is edict or type(v) is dict:
             try:
                 _merge_a_into_b(a[k], b[k])
             except:
@@ -175,5 +176,11 @@ def cfg_from_file(filename):
     import yaml
     with open(filename, 'r') as f:
         yaml_cfg = edict(yaml.load(f))
+
+    _merge_a_into_b(yaml_cfg, __C)
+
+def cfg_from_string(filename):
+    """Load a config file and merge it into the default options."""
+    yaml_cfg = edict(ast.literal_eval(filename))
 
     _merge_a_into_b(yaml_cfg, __C)
