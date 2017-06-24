@@ -117,12 +117,13 @@ def _get_image_blob(roidb, scale_ind):
         if roidb[i]['flow'] not in preloaded_images:
             gt_flow = sintel_utils.read_flow_file_with_path(roidb[i]['flow']).transpose([1, 0, 2])
             flow_processed = cv2.resize(gt_flow, None, None, fx=im_scale, fy=im_scale, interpolation=cv2.INTER_LINEAR)
+            flow_processed /= cfg.TRAIN.SCALES_BASE[scale_ind]
 
-                # mask = occlusions_processed.sum(axis=2)
-                # mask = np.dstack((mask, mask))
-                # flow_processed = np.where(mask, flow_processed, np.nan)
-                # #TODO: remove this debugging check
-                # np.array_equal((mask == False).nonzero(), (np.isnan(flow_processed)).nonzero())
+            # mask = occlusions_processed.sum(axis=2)
+            # mask = np.dstack((mask, mask))
+            # flow_processed = np.where(mask, flow_processed, np.nan)
+            # #TODO: remove this debugging check
+            # np.array_equal((mask == False).nonzero(), (np.isnan(flow_processed)).nonzero())
 
             preloaded_images[roidb[i]['flow']] = flow_processed
         flow_processed = preloaded_images[roidb[i]['flow']]
@@ -143,7 +144,7 @@ def _get_image_blob(roidb, scale_ind):
     image_left_blob = im_list_to_blob(processed_left, 3)
     image_right_blob = im_list_to_blob(processed_right, 3)
     gt_flow_blob = im_list_to_blob(processed_flow, 2)
-    occluded_blob = im_list_to_blob(occlusions_processed, 2)
+    occluded_blob = im_list_to_blob(processed_occluded, 1)
     # if cfg.TRAIN.GAN:
     #     blob_rescale = im_list_to_blob(processed_ims_rescale, 3)
     # else:

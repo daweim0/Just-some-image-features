@@ -25,6 +25,8 @@ if cfg.TRAIN.SINGLE_FRAME:
         __sets['vgg16_gan'] = networks.vgg16_gan(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.NUM_UNITS, cfg.TRAIN.SCALES_BASE, cfg.TRAIN.VERTEX_REG, cfg.TRAIN.TRAINABLE)
     if cfg.NETWORK == 'VGG16FLOW':
         __sets['vgg16_flow'] = networks.vgg16_flow(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.NUM_UNITS, cfg.TRAIN.SCALES_BASE, cfg.TRAIN.VERTEX_REG, cfg.TRAIN.TRAINABLE)
+    elif cfg.NETWORK == 'VGG16_FLOW_FEATURES':
+        __sets['vgg16_flow_features'] = networks.vgg16_flow_features(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.NUM_UNITS, cfg.TRAIN.SCALES_BASE, cfg.TRAIN.VERTEX_REG, cfg.TRAIN.TRAINABLE)
     if cfg.NETWORK == 'DCGAN':
         __sets['dcgan'] = networks.dcgan()
     if cfg.NETWORK == 'RESNET50':

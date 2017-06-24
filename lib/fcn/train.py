@@ -67,7 +67,7 @@ class SolverWrapper(object):
         global pause_data_input
         """Network training loop."""
         # add summary
-        tf.summary.scalar('loss', loss)
+        tf.summary.tensor_summary('loss', loss)
         merged = tf.summary.merge_all()
         train_writer = tf.summary.FileWriter(self.output_dir, sess.graph)
 
@@ -244,15 +244,10 @@ def get_training_roidb(imdb):
 
 def load_and_enqueue(sess, net, roidb, num_classes, coord):
     global loader_paused
-    if cfg.TRAIN.OPTICAL_FLOW:
-        # data layer
-        data_layer = GtFlowDataLayer(roidb, num_classes)
-    elif cfg.TRAIN.SINGLE_FRAME:
-        # data layer
-        data_layer = GtSingleDataLayer(roidb, num_classes)
-    else:
-        # data layer
-        data_layer = GtDataLayer(roidb, num_classes)
+    assert cfg.TRAIN.OPTICAL_FLOW, "this network can only do optical flow"
+
+    # data layer
+    data_layer = GtFlowDataLayer(roidb, num_classes)
 
     i = 0
     while not coord.should_stop():
@@ -268,56 +263,15 @@ def load_and_enqueue(sess, net, roidb, num_classes, coord):
 
         blobs = data_layer.forward()
 
-        if cfg.INPUT == 'RGBD':
-            data_blob = blobs['data_image_color']
-            data_p_blob = blobs['data_image_depth']
-        elif cfg.INPUT == 'COLOR':
-            data_blob = blobs['data_image_color']
-        elif cfg.INPUT == 'DEPTH':
-            data_blob = blobs['data_image_depth']
-        elif cfg.INPUT == 'NORMAL':
-            data_blob = blobs['data_image_normal']
-        elif cfg.INPUT == 'LEFT_RIGHT_FLOW':
-            left_blob = blobs['left_image']
-            right_blob = blobs['right_image']
-            flow_blob = blobs['flow']
+        left_blob = blobs['left_image']
+        right_blob = blobs['right_image']
+        flow_blob = blobs['flow']
+        occluded_blob = blobs['occluded']
 
         if cfg.INPUT == 'LEFT_RIGHT_FLOW':
             feed_dict = {net.data_left: left_blob, net.data_right: right_blob, net.gt_flow: flow_blob,
-                         net.keep_prob: 0.5}
-        elif cfg.TRAIN.SINGLE_FRAME:
-            if cfg.INPUT == 'RGBD':
-                if cfg.TRAIN.VERTEX_REG:
-                    feed_dict={net.data: data_blob, net.data_p: data_p_blob, net.gt_label_2d: blobs['data_label'], net.keep_prob: 0.5,
-                               net.vertex_targets: blobs['data_vertex_targets'], net.vertex_weights: blobs['data_vertex_weights']}
+                         net.occluded: occluded_blob, net.keep_prob: 0.5}
 
-                else:
-                    feed_dict={net.data: data_blob, net.data_p: data_p_blob, net.gt_label_2d: blobs['data_label'], net.keep_prob: 0.5}
-
-            else:
-                if cfg.TRAIN.VERTEX_REG:
-                    if cfg.TRAIN.GAN:
-                        feed_dict={net.data: blobs['data_image_color_rescale'], net.data_gt: blobs['data_vertex_images'], net.keep_prob: 0.5,
-                                   net.z: blobs['data_gan_z']}
-                    else:
-                        feed_dict={net.data: data_blob, net.gt_label_2d: blobs['data_label'], net.keep_prob: 0.5,
-                                   net.vertex_targets: blobs['data_vertex_targets'], net.vertex_weights: blobs['data_vertex_weights']}
-
-                else:
-                    if cfg.TRAIN.GAN:
-                        feed_dict={net.data: blobs['data_image_color_rescale'], net.data_gt: blobs['data_vertex_images'], net.keep_prob: 0.5,
-                                   net.z: blobs['data_gan_z']}
-                    else:
-                        feed_dict={net.data: data_blob, net.gt_label_2d: blobs['data_label'], net.keep_prob: 0.5}
-        else:
-            if cfg.INPUT == 'RGBD':
-                feed_dict={net.data: data_blob, net.data_p: data_p_blob, net.gt_label_2d: blobs['data_label'],
-                           net.depth: blobs['data_depth'], net.meta_data: blobs['data_meta_data'],
-                           net.state: blobs['data_state'], net.weights: blobs['data_weights'], net.points: blobs['data_points'], net.keep_prob: 0.5}
-            else:
-                feed_dict={net.data: data_blob, net.gt_label_2d: blobs['data_label'],
-                           net.depth: blobs['data_depth'], net.meta_data: blobs['data_meta_data'],
-                           net.state: blobs['data_state'], net.weights: blobs['data_weights'], net.points: blobs['data_points'], net.keep_prob: 0.5}
         # print "\t\t\t\t\t\trunning enqueue op " + str(i)
         try:
             sess.run(net.enqueue_op, feed_dict=feed_dict)
@@ -360,16 +314,8 @@ def loss_cross_entropy_single_frame(scores, labels):
 
 def train_flow(network, imdb, roidb, output_dir, pretrained_model=None, max_iters=40000):
     """Train a Fast R-CNN network."""
-    predicted_flow = network.get_output('predicted_flow')
-    gt_flow = network.get_output('gt_flow')
-    # cropped_prediction = tf.transpose(tf.image.crop_to_bounding_box(predicted_flow, 0, 0, 436, 1024), [0, 2, 1, 3])
-    # final_weights = tf.get_variable("final_weights", shape=[1, 1024, 436, 2], initializer=tf.truncated_normal_initializer(0.0, stddev=0.001))
-    if cfg.LOSS_FUNC == "L2":
-        loss = tf.reduce_mean(tf.sqrt(tf.reduce_sum(tf.pow(gt_flow - predicted_flow, 2), axis=3)))
-    elif cfg.LOSS_FUNC == "L1":
-        loss = tf.reduce_mean(tf.abs(gt_flow - predicted_flow))
-    else:
-        assert False, "LOSS_FUNC must be specified"
+    # loss = network.get_output('triplet_flow_loss_name').loss
+    loss = network.get_output('triplet_flow_loss_name')[0]
 
     # optimizer
     global_step = tf.Variable(0, trainable=False)

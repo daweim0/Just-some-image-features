@@ -8,8 +8,10 @@ import projecting_layer.projecting_op_grad
 import computing_label_layer.computing_label_op as compute_label_op
 import computing_flow_layer.computing_flow_op as compute_flow_op
 import computing_flow_layer.computing_flow_op_grad
-import triplet_loss.triplet_loss_op as triplet_loss_op
-import triplet_loss.triplet_loss_op_grad
+# import triplet_loss.triplet_loss_op as triplet_loss_op
+import triplet_flow_loss.triplet_flow_loss_op as triplet_flow_loss_op
+# import triplet_loss_old.triplet_loss_op_grad
+from triplet_flow_loss import triplet_flow_loss_op_grad
 # from gru2d import GRU2DCell
 # from gru2d_original import GRUCell
 # from gru3d import GRU3DCell
@@ -17,6 +19,8 @@ import triplet_loss.triplet_loss_op_grad
 # from add2d import Add2DCell
 
 DEFAULT_PADDING = 'SAME'
+
+triplet_flow_loss_op_grad.test()
 
 def layer(op):
     def layer_decorated(self, *args, **kwargs):
@@ -234,9 +238,16 @@ class Network(object):
     def compute_flow(self, input, kernel_size, threshold, max_weight, name):
         return compute_flow_op.compute_flow(input[0], input[1], input[2], input[3], input[4], kernel_size, threshold, max_weight, name=name)
 
+    # @layer
+    # def triplet_loss(self, input, margin, name):
+    #     return triplet_loss_op.triplet_loss(input[0], input[1], tf.cast(input[2], tf.int32), margin, name=name)
+
     @layer
-    def triplet_loss(self, input, margin, name):
-        return triplet_loss_op.triplet_loss(input[0], input[1], tf.cast(input[2], tf.int32), margin, name=name)
+    def triplet_flow_loss(self, input, margin, name):
+        output = triplet_flow_loss_op.triplet_flow_loss(self.get_output(input[0]), self.get_output(input[1]),
+                                                      self.get_output(input[2]), self.get_output(input[3]), margin, name=name)
+
+        return tf.Print(output[0], [output[0]], message="triplet_flow_loss output", name="loss"), output[1], output[2]
 
     @layer
     def project(self, input, kernel_size, threshold, name):
