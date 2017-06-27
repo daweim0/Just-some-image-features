@@ -78,7 +78,7 @@ class vgg16_flow_features(Network):
              .add_immediate(tf.constant(0.0, tf.float32), name='conv5_3_r'))
 
         (self.feed(['conv5_3_l', 'conv5_3_r', 'gt_flow', 'occluded'])
-            .triplet_flow_loss(margin=1, name="triplet_flow_loss_name"))
+            .triplet_flow_loss(margin=1 * 512, name="triplet_flow_loss_name"))
         pass
 
 

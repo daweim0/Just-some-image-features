@@ -33,8 +33,6 @@ using namespace tensorflow;
 typedef Eigen::ThreadPoolDevice CPUDevice;
 
 
-
-
 REGISTER_OP("TripletFlow")
 	.Attr("T: {float, double}")
 	.Attr("margin: float")
@@ -109,6 +107,17 @@ class TripletFlowOp : public OpKernel {
 		int width = left_data.dim_size(2);
 		// number of channels
 		int feature_depth = left_data.dim_size(3);
+
+        //std::cout << "Image batch_size: " << batch_size << " height: " << height << " width: " << width << " feature_depth: " << feature_depth << std::endl;
+        //std::cout << "flow batch_size: " << flow_tensor.dim_size(0) << " height: " << flow_tensor.dim_size(1) << " width: " << flow_tensor.dim_size(2) << " feature_depth: " << flow_tensor.dim_size(3) << std::endl;
+        //std::cout << "occluded batch_size: " << occluded.dim_size(0) << " height: " << occluded.dim_size(1) << " width: " << occluded.dim_size(2) << std::endl;
+
+        assert(batch_size == flow_tensor.dim_size(0));
+        assert(batch_size == occluded.dim_size(0));
+        assert(height == flow_tensor.dim_size(1));
+        assert(height == occluded.dim_size(1));
+        assert(width == flow_tensor.dim_size(2));
+        assert(width == occluded.dim_size(2));
 
         int feature_arr_size = batch_size * height * width * feature_depth;
 
@@ -205,10 +214,10 @@ class TripletFlowOp : public OpKernel {
 
 //        std::cout << "hi2" << std::endl;
 
-		T loss = 0;
+		double loss = 0;
 		// for each triplet
 		int num_triplets = triplets.size() / 3;
-        std::cerr << "num_triplets: " << num_triplets << std::endl;
+        std::cout << "num_triplets: " << num_triplets << std::endl;
 		for (int triplet_num = 0; triplet_num < num_triplets; triplet_num++)
 		{
             const int index_i = triplets.at(triplet_num * 3 + 0);
@@ -241,10 +250,15 @@ class TripletFlowOp : public OpKernel {
 //                std::cout << "hi 2.2" << std::endl;
                 D_ik += pow(left_data_array[data_i_index] - left_data_array[data_k_index], 2);
             }
-
             // add the loss
-            T dis = D_ij - D_ik + margin_;
-            loss += std::max(dis, T(0.0));
+            double dis = D_ij - D_ik + margin_;
+			T old_loss = loss;
+            loss += std::max(dis, double(0.0));
+			// std::cout << "dis: " << dis << " D_ij: " << D_ij << " D_ik: " << D_ik << std::endl;
+			if(old_loss > loss && dis > 0.0) {
+				std::cout << "loss overflowed, old_loss: " << old_loss << " loss: " << loss << std::endl;
+				assert(false);
+			}
 
             // compute gradients
             if (dis > 0) {
@@ -280,8 +294,10 @@ class TripletFlowOp : public OpKernel {
                 }
             }
 		}
+        std::cout << "pre-scaled loss: " << loss;
 		loss /= num_triplets * 2.0;
-		top_data(0) = loss;
+        std::cout << " scaled loss: " << loss << std::endl;
+		top_data(0) = T(loss);
 
 //        std::cout << "hi3" << std::endl;
 	}
@@ -383,57 +399,64 @@ REGISTER_KERNEL_BUILDER(Name("TripletFlow").Device(DEVICE_CPU).TypeConstraint<do
 // compute gradient
 template <class Device, class T>
 class TripletFlowGradOp : public OpKernel {
- public:
-  explicit TripletFlowGradOp(OpKernelConstruction* context) : OpKernel(context) {
-	// Get the margin
-	OP_REQUIRES_OK(context,
-				   context->GetAttr("margin", &margin_));
-	// Check that margin is positive
-	OP_REQUIRES(context, margin_ >= 0,
-				errors::InvalidArgument("Need margin >= 0, got ", margin_));
-  }
-
-  void Compute(OpKernelContext* context) override
-  {
-	const Tensor& bottom_left_diff = context->input(0);
-	auto bottom_left_diff_flat = bottom_left_diff.flat<T>();
-
-	const Tensor& bottom_right_diff = context->input(1);
-	auto bottom_right_diff_flat = bottom_right_diff.flat<T>();
-
-	const Tensor& out_backprop = context->input(2);
-	T loss = out_backprop.flat<T>()(0);
-
-	// data should have 4 dimensions.
-	OP_REQUIRES(context, bottom_left_diff.dims() == 4,
-				errors::InvalidArgument("bottom diff must be 4-dimensional"));
-
-	// batch size
-	int batch_size = bottom_left_diff.dim_size(0);
-	// height
-	int height = bottom_left_diff.dim_size(1);
-	// width
-	int width = bottom_left_diff.dim_size(2);
-	// number of channels
-	int num_channels = bottom_left_diff.dim_size(3);
-
-	// construct the output shape
-	TensorShape output_shape = bottom_left_diff.shape();
-	Tensor* output = nullptr;
-	OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &output));
-	auto top_data_left = output->template flat<T>();
-
-	OP_REQUIRES_OK(context, context->allocate_output(1, output_shape, &output));
-	auto top_data_right = output->template flat<T>();
-
-	for (int i = 0; i < batch_size * height * width * num_channels; i++)
-    {
-        top_data_left(i) = loss * bottom_left_diff_flat(i);
-        top_data_right(i) = loss * bottom_right_diff_flat(i);
+public:
+    explicit TripletFlowGradOp(OpKernelConstruction* context) : OpKernel(context) {
+        // Get the margin
+        OP_REQUIRES_OK(context,
+                       context->GetAttr("margin", &margin_));
+        // Check that margin is positive
+        OP_REQUIRES(context, margin_ >= 0,
+                    errors::InvalidArgument("Need margin >= 0, got ", margin_));
     }
-  }
- private:
-  float margin_;
+
+    void Compute(OpKernelContext* context) override
+    {
+        const Tensor& bottom_left_diff = context->input(0);
+        auto bottom_left_diff_flat = bottom_left_diff.flat<T>();
+
+        const Tensor& bottom_right_diff = context->input(1);
+        auto bottom_right_diff_flat = bottom_right_diff.flat<T>();
+
+        const Tensor& out_backprop = context->input(2);
+        T loss = out_backprop.flat<T>()(0);
+
+        // data should have 4 dimensions.
+        OP_REQUIRES(context, bottom_left_diff.dims() == 4,
+                    errors::InvalidArgument("bottom diff must be 4-dimensional"));
+
+        // data should have 4 dimensions.
+        OP_REQUIRES(context, bottom_right_diff.dims() == 4,
+                    errors::InvalidArgument("bottom_right_diff must be 4-dimensional"));
+
+        // batch size
+        int batch_size = bottom_left_diff.dim_size(0);
+        // height
+        int height = bottom_left_diff.dim_size(1);
+        // width
+        int width = bottom_left_diff.dim_size(2);
+        // number of channels
+        int num_channels = bottom_left_diff.dim_size(3);
+
+        std::cout << "batch_size: " << batch_size << " height: " << height << " width: " << width << " num_channels: " << num_channels << std::endl;
+        std::cout << "\tout_backprop dims: " << out_backprop.dims() << std::endl;
+
+        // construct the output shape
+        TensorShape output_shape = bottom_left_diff.shape();
+        Tensor* output = nullptr;
+        OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &output));
+        auto top_data_left = output->template flat<T>();
+
+        OP_REQUIRES_OK(context, context->allocate_output(1, output_shape, &output));
+        auto top_data_right = output->template flat<T>();
+
+        for (int i = 0; i < batch_size * height * width * num_channels; i++)
+        {
+            top_data_left(i) = loss * bottom_left_diff_flat(i);
+            top_data_right(i) = loss * bottom_right_diff_flat(i);
+        }
+    }
+private:
+    float margin_;
 };
 
 REGISTER_KERNEL_BUILDER(Name("TripletFlowGrad").Device(DEVICE_CPU).TypeConstraint<float>("T"), TripletFlowGradOp<CPUDevice, float>);

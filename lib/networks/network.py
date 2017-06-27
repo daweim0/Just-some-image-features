@@ -17,10 +17,10 @@ from triplet_flow_loss import triplet_flow_loss_op_grad
 # from gru3d import GRU3DCell
 # from vanilla2d import Vanilla2DCell
 # from add2d import Add2DCell
+import custom_gradient_checker as gradient_checker
+from tensorflow.python.framework import constant_op
 
 DEFAULT_PADDING = 'SAME'
-
-triplet_flow_loss_op_grad.test()
 
 def layer(op):
     def layer_decorated(self, *args, **kwargs):
@@ -248,6 +248,20 @@ class Network(object):
                                                       self.get_output(input[2]), self.get_output(input[3]), margin, name=name)
 
         return tf.Print(output[0], [output[0]], message="triplet_flow_loss output", name="loss"), output[1], output[2]
+    
+    
+    def test_triplet_flow_loss(self, session, input_dimensions, left_input, right_input, flow_input, mask_input, margin):
+        x_val = [left_input, right_input, flow_input, mask_input]
+        x = [constant_op.constant(x_val[0], name="x"), constant_op.constant(x_val[1], name="x"),
+             constant_op.constant(x_val[2], name="x"), constant_op.constant(x_val[3], name="x")]
+        y = triplet_flow_loss_op.triplet_flow_loss(left_input, right_input, flow_input, mask_input, margin, name="triplet_flow_loss")
+        x_init = [np.asarray(x_val[0], dtype=np.float32, order="F"), np.asarray(x_val[1], dtype=np.float32, order="F"),
+                  np.asarray(x_val[2], dtype=np.float32, order="F"), np.asarray(x_val[3], dtype=np.float32, order="F")]
+        err = gradient_checker.compute_gradient_error(x, input_dimensions,
+                                                      y, [3], x_init_value=x_init)
+
+        print("elu (float32) gradient err = ", err)
+        #self.assertLess(err, 1e-4)
 
     @layer
     def project(self, input, kernel_size, threshold, name):

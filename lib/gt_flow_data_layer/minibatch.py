@@ -115,9 +115,10 @@ def _get_image_blob(roidb, scale_ind):
         im_right_processed = preloaded_images[roidb[i]['image_right']]
 
         if roidb[i]['flow'] not in preloaded_images:
-            gt_flow = sintel_utils.read_flow_file_with_path(roidb[i]['flow']).transpose([1, 0, 2])
-            flow_processed = cv2.resize(gt_flow, None, None, fx=im_scale, fy=im_scale, interpolation=cv2.INTER_LINEAR)
-            flow_processed /= cfg.TRAIN.SCALES_BASE[scale_ind]
+            gt_flow = pad_im(sintel_utils.read_flow_file_with_path(roidb[i]['flow']).transpose([1, 0, 2]), 16)
+            flow_processed = cv2.resize(gt_flow, None, None, fx=im_scale/cfg.NET_CONF.MATCHING_STAGE_SCALE,
+                                        fy=im_scale/cfg.NET_CONF.MATCHING_STAGE_SCALE, interpolation=cv2.INTER_LINEAR)
+            flow_processed *= cfg.TRAIN.SCALES_BASE[scale_ind] / cfg.NET_CONF.MATCHING_STAGE_SCALE
 
             # mask = occlusions_processed.sum(axis=2)
             # mask = np.dstack((mask, mask))
@@ -129,16 +130,19 @@ def _get_image_blob(roidb, scale_ind):
         flow_processed = preloaded_images[roidb[i]['flow']]
 
         if roidb[i]['occluded'] not in preloaded_images:
-            occlusions = cv2.imread(roidb[i]['occluded'])
-            occlusions_processed = cv2.resize(occlusions, None, None, fx=im_scale, fy=im_scale,
-                                              interpolation=cv2.INTER_LINEAR).sum(axis=2) / (255 * 3)
+            occlusions = pad_im(cv2.imread(roidb[i]['occluded']), 16)
+            occlusions_processed = cv2.resize(occlusions, None, None, fx=im_scale/cfg.NET_CONF.MATCHING_STAGE_SCALE,
+                                              fy=im_scale/cfg.NET_CONF.MATCHING_STAGE_SCALE, interpolation=cv2.INTER_LINEAR).sum(axis=2) / (255 * 3)
+            occlusions_processed = np.round(occlusions_processed).astype(np.int32)
             preloaded_images[roidb[i]['occluded']] = occlusions_processed
         occluded_processed = preloaded_images[roidb[i]['occluded']]
 
         processed_left.append(im_left_processed)
         processed_right.append(im_right_processed)
-        processed_flow.append(pad_im(flow_processed, 16))
-        processed_occluded.append(pad_im(occluded_processed, 16))
+        # processed_flow.append(pad_im(flow_processed, 16))
+        # processed_occluded.append(pad_im(occluded_processed, 16))
+        processed_flow.append(flow_processed)
+        processed_occluded.append(occluded_processed)
 
     # Create a blob to hold the input images
     image_left_blob = im_list_to_blob(processed_left, 3)
