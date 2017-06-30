@@ -1,15 +1,15 @@
-# --------------------------------------------------------
-# FCN
-# Copyright (c) 2016 RSE at UW
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Yu Xiang
-# --------------------------------------------------------
+# output/sintel_albedo_features/batch_size_1_loss_L2_optimizer_MomentumOptimizer_conv_size_1_ConcatSub_append_n_convolutions_1_2017-06-27/vgg16_flow_sintel_albedo_iter_15000.ckpt
+# data/imagenet_models/vgg16_convs.npy
+# output/sintel_albedo_features_trainable_false/batch_size_1_loss_L2_optimizer_MomentumOptimizer_conv_size_1_ConcatSub_append_n_convolutions_1_2017-06-28/vgg16_flow_sintel_albedo_iter_1000.ckpt
 
-"""Train a FCN"""
+#output/pupper_features_trainable_false/batch_size_1_loss_L2_optimizer_MomentumOptimizer_conv_size_1_ConcatSub_append_n_convolutions_1_2017-06-28/vgg16_flow_sintel_albedo_iter_20000.ckpt
 
+
+import pyximport
+# pyximport.install()
 from fcn.config import cfg
-from gt_data_layer.layer import GtDataLayer
-from gt_single_data_layer.layer import GtSingleDataLayer
+# from gt_data_layer.layer import GtDataLayer
+# from gt_single_data_layer.layer import GtSingleDataLayer
 from gt_flow_data_layer.layer import GtFlowDataLayer
 from utils.timer import Timer
 import time
@@ -18,139 +18,20 @@ import os
 import tensorflow as tf
 import sys
 import threading
-from tensorflow.python import debug as tf_debug
+# from tensorflow.python import debug as tf_debug
+# from triplet_flow_loss import slow_flow_calculator
+# from triplet_flow_loss.slow_flow_calculator_cython import compute_flow
+import sintel_utils
+from triplet_flow_loss.run_slow_flow_calculator_process import get_flow_parallel
 
-import triplet_flow_loss.triplet_flow_loss_op as triplet_flow_loss_op
-from triplet_flow_loss import triplet_flow_loss_op_grad
+# import triplet_flow_loss.triplet_flow_loss_op as triplet_flow_loss_op
+# from triplet_flow_loss import triplet_flow_loss_op_grad
 
+import matplotlib.pyplot as plt
 
-pause_data_input = False
-loader_paused = False
-
-
-class SolverWrapper(object):
-    """A simple wrapper around Caffe's solver.
-    This wrapper gives us control over he snapshotting process, which we
-    use to unnormalize the learned bounding-box regression weights.
-    """
-
-    def __init__(self, sess, network, imdb, roidb, output_dir, pretrained_model=None):
-        """Initialize the SolverWrapper."""
-        self.net = network
-        self.imdb = imdb
-        self.roidb = roidb
-        self.output_dir = output_dir
-        self.pretrained_model = pretrained_model
-
-        # For checkpoint
-        self.saver = tf.train.Saver()
-
-    def snapshot(self, sess, iter):
-        """Take a snapshot of the network after unnormalizing the learned
-        bounding-box regression weights. This enables easy use at test-time.
-        """
-        net = self.net
-
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
-
-        infix = ('_' + cfg.TRAIN.SNAPSHOT_INFIX
-                 if cfg.TRAIN.SNAPSHOT_INFIX != '' else '')
-        filename = (cfg.TRAIN.SNAPSHOT_PREFIX + infix +
-                    '_iter_{:d}'.format(iter + 1) + '.ckpt')
-        filename = os.path.join(self.output_dir, filename)
-
-        self.saver.save(sess, filename)
-        print 'Wrote snapshot to: {:s}'.format(filename)
-
-    def train_model(self, sess, train_op, loss, learning_rate, max_iters, net=None, imdb=None, ):
-        global pause_data_input
-        """Network training loop."""
-        # add summary
-        tf.summary.tensor_summary('loss', loss)
-        merged = tf.summary.merge_all()
-        train_writer = tf.summary.FileWriter(self.output_dir, sess.graph)
-
-        # initialize variables
-        print "initializing variables"
-        sess.run(tf.global_variables_initializer())
-        if self.pretrained_model is not None and str(self.pretrained_model).find('.npy') != -1:
-            print ('Loading pretrained model '
-                   'weights from {:s}').format(self.pretrained_model)
-            self.net.load(self.pretrained_model, sess, True)
-        elif self.pretrained_model is not None and str(self.pretrained_model).find('.ckpt') != -1:
-            print ('Loading checkpoint from {:s}').format(self.pretrained_model)
-            self.saver.restore(sess, self.pretrained_model)
-
-        tf.get_default_graph().finalize()
-
-        last_snapshot_iter = -1
-        start_iter = 0
-        if self.pretrained_model is not None and str(self.pretrained_model).find('.ckpt') != -1:
-            start_index = str(self.pretrained_model).find('iter_') + 5
-            end_index = str(self.pretrained_model).find('.ckpt')
-            start_iter = int(self.pretrained_model[start_index: end_index])
-
-        loss_history = list()
-        timer = Timer()
-        for iter in range(start_iter, max_iters):
-            timer.tic()
-            queue_size = sess.run(net.queue_size_op)
-
-            while sess.run(net.queue_size_op) == 0:
-                time.sleep(0.005)
-
-            summary, loss_value, lr, _ = sess.run([merged, loss, learning_rate, train_op])
-            train_writer.add_summary(summary, iter)
-            timer.toc()
-
-            print 'iter: %d / %d, loss: %7.4f, lr: %.8f, time: %1.2f, queue size before training op: %3i' % \
-                  (iter + 1, max_iters, loss_value, lr, timer.diff, queue_size)
-            loss_history.append(loss_value)
-
-            if (iter + 1) % cfg.TRAIN.DISPLAY == 0:
-                print 'speed: {:.3f}s / iter'.format(timer.average_time) + ", averaged loss: %7.4f" % np.mean(
-                    loss_history)
-                loss_history = list()
-                # putting any file called show_visuals in the project root directory will show network output
-                # in its current (partially trained) state
-                if cfg.TRAIN.VISUALIZE_DURING_TRAIN and os.listdir('.').count('show_visuals') != 0:
-                    assert net is not None, "the network must be passed to train_model() if VISUALIZE is true"
-                    # pause the data loading thread and wait for it to finish
-                    pause_data_input = True
-                    for i in xrange(1000):
-                        time.sleep(0.001)
-                        if loader_paused == True:
-                            break
-                    try:
-                        test.test_flow_net(sess, net, imdb, None, n_images=4, training_iter=iter, save_image=False)
-                    except IndexError as e:
-                        print "error during visualization (training should continue)"
-                        print e
-                    pause_data_input = False
-
-            if (iter + 1) % cfg.TRAIN.SNAPSHOT_ITERS == 0:
-                last_snapshot_iter = iter
-                self.snapshot(sess, iter)
-
-                if cfg.TRAIN.DELETE_OLD_CHECKPOINTS:
-                    base_dir = os.getcwd()
-                    try:
-                        os.chdir(self.output_dir)
-                        while True:
-                            files = sorted(os.listdir("."), key=os.path.getctime)
-                            if len(files) < 20:
-                                break
-                            while files[0].find(".") == -1:
-                                files.pop(0)
-                            os.remove(files[0])
-                    except IndexError:
-                        pass
-                    finally:
-                        os.chdir(base_dir)
-
-        if last_snapshot_iter != iter:
-            self.snapshot(sess, iter)
+i = 1
+plot_x = 3
+plot_y = 3
 
 
 def get_training_roidb(imdb):
@@ -163,29 +44,137 @@ def get_training_roidb(imdb):
     return imdb.roidb
 
 
-def test_loss(network, imdb, roidb, output_dir, pretrained_model=None, max_iters=40000):
+def test_loss(network, roidb, pretrained_model=None):
     """Train a Fast R-CNN network."""
-    dt = 100.0
+    # dt = 100.0
+    #
+    # _1 = np.zeros([1, 14, 32, 512], dtype=np.float32)
+    # _2 = np.zeros([1, 14, 32, 512], dtype=np.float32)
+    # _3 = np.ones([1, 14, 32, 2], dtype=np.float32)
+    # _4 = np.zeros([1, 14, 32, 1], dtype=np.int32)
+    #
+    # output_1 = run_triplet_flow_op(_1, _2, _3, _4)
+    #
+    # perturbation = np.zeros([1, 14, 32, 512], dtype=np.float32)
+    # perturbation[0, 13, 31, 0] += dt
+    #
+    # output_2 = run_triplet_flow_op(_1 + perturbation, _2, _3, _4)
+    #
+    # numerical_dL = (output_2[0] - output_1[0]) / dt
+    # symbolic_dL = output_1[1][0, 0, 0, 0]
 
-    _1 = np.zeros([1, 14, 32, 512], dtype=np.float32)
-    _2 = np.zeros([1, 14, 32, 512], dtype=np.float32)
-    _3 = np.ones([1, 14, 32, 2], dtype=np.float32)
-    _4 = np.zeros([1, 14, 32, 1], dtype=np.int32)
+    global i
+    # plt.ion()
+    cfg.TRAIN.IMS_PER_BATCH = 1
 
-    output_1 = run_triplet_flow_op(_1, _2, _3, _4)
+    data_layer = GtFlowDataLayer(roidb, None)
+    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
 
-    perturbation = np.zeros([1, 14, 32, 512], dtype=np.float32)
-    perturbation[0, 13, 31, 0] += dt
+        # initialize variables
+        print "initializing variables"
+        saver = tf.train.Saver()
+        sess.run(tf.global_variables_initializer())
+        if pretrained_model is not None and str(pretrained_model).find('.npy') != -1:
+            print ('Loading pretrained model '
+                   'weights from {:s}').format(pretrained_model)
+            network.load(pretrained_model, sess, True)
+        elif pretrained_model is not None and str(pretrained_model).find('.ckpt') != -1:
+            print ('Loading checkpoint from {:s}').format(pretrained_model)
+            saver.restore(sess, pretrained_model)
+        tf.get_default_graph().finalize()
 
-    output_2 = run_triplet_flow_op(_1 + perturbation, _2, _3, _4)
+        upscore_matcher_input = [network.get_output('upscore_l'), network.get_output('upscore_r'),
+                                 network.get_output('gt_flow'), network.get_output('occluded')]
 
-    numerical_dL = (output_2[0] - output_1[0]) / dt
-    symbolic_dL = output_1[1][0, 0, 0, 0]
+    #     score_conv_4_matcher_input = [network.get_output('score_conv4_l'), network.get_output('score_conv4_r'),
+    #                                   network.get_output('flow_upscore_4'), network.get_output('occluded_pool3')]
+    #
+    #     conv_5_matcher_input = [network.get_output('conv5_3_l'), network.get_output('conv5_3_r'),
+    #                             network.get_output('flow_pool3_out'), network.get_output('occluded_pool4')]
+    #
+    #     upscore_conv_5_matcher_input = [network.get_output('upscore_conv5_l'), network.get_output('upscore_conv5_r'),
+    #                                     network.get_output('flow_upscore_4'), network.get_output('occluded_pool3')]
+    #
+    #     conv_3_matcher_input = [network.get_output('conv3_l'), network.get_output('conv3_r'),
+    #                             network.get_output('flow_pool2'), network.get_output('occluded_pool2')]
+    #
+    #     conv_1_matcher_input = [network.get_output('conv1_l'), network.get_output('conv1_r'),
+    #                             network.get_output('gt_flow'), network.get_output('occluded')]
 
-    pass
+        while True:
+            # feed data and get feature map
+            blobs = data_layer.forward()
+            left_blob = blobs['left_image']
+            right_blob = blobs['right_image']
+            flow_blob = blobs['flow']
+            occluded_blob = blobs['occluded']
+            feed_dict = {network.data_left: left_blob, network.data_right: right_blob, network.gt_flow: flow_blob,
+                         network.occluded: occluded_blob, network.keep_prob: 1.0}
+            sess.run(network.enqueue_op, feed_dict=feed_dict)
+
+            # left_features, right_features, flow, mask = sess.run([network.get_output('upscore_l'),
+            #           network.get_output('upscore_r'), network.get_output('gt_flow'), network.get_output('occluded')])
+
+            left_features, right_features, gt_flow, mask = sess.run(upscore_matcher_input)
+
+            # left_features, right_features, gt_flow, mask = left_blob[0], right_blob[0], flow_blob[0], occluded_blob[0]
+
+            left_features = np.squeeze(left_features)
+            right_features = np.squeeze(right_features)
+            gt_flow = np.squeeze(gt_flow)
+            mask = np.squeeze(mask)
+            print "starting"
+            predicted_flow = get_flow_parallel(left_features, right_features, mask, neighborhood_len_import=200)
+            # predicted_flow = compute_flow(left_features, right_features, mask, neighborhood_len_import=40)
+            # predicted_flow = slow_flow_calculator.compute_flow(left_features, right_features, mask)
+
+            EPE = sintel_utils.calculate_EPE(gt_flow, predicted_flow)
+            print "average EPE: " + str(EPE)
+
+            scale_low, scale_high = sintel_utils.colorize_features(left_features, get_scale=True)
+
+            plot_stuff(fix_rgb_image(left_blob[0]), "left image")
+            plot_stuff(fix_rgb_image(right_blob[0]), "right image")
+            plot_stuff(sintel_utils.custom_color_from_flow(gt_flow), "gt flow")
+            plot_stuff(sintel_utils.colorize_features(left_features, scale_low=scale_low, scale_high=scale_high), "left features")
+            plot_stuff(sintel_utils.colorize_features(right_features), "right features")
+            plot_stuff(sintel_utils.custom_color_from_flow(predicted_flow), "predicted flow")
+            # diff_zero = left_features[10:-10, 10:-10] - right_features[10:-10, 10:-10]
+            flow_means = [gt_flow[:,:,0].mean(), gt_flow[:,:,1].mean()]
+            diff_flowd = left_features[10-int(flow_means[1]):-10-int(flow_means[1]), 10-int(flow_means[0]):-10-int(flow_means[0])] - right_features[10:-10, 10:-10]
+            # plot_stuff(colorize_features(np.abs(diff_zero)), "feature differences no shift")
+            plot_stuff(sintel_utils.colorize_features(np.abs(diff_flowd), scale_high=scale_high), "feature differences shifted by flow")
+
+            plt.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.95, wspace=0.09, hspace=0.05)
+            plt.show()
+
+            # input = raw_input("press enter to see the next plot (or type exit to exit)")
+            # if input == "exit":
+            #     break
+            clear_plot()
+            i = 1
 
 
-from tensorflow.python.ops import nn_ops
+def fix_rgb_image(image_in):
+    image = image_in.copy() + cfg.PIXEL_MEANS
+    image = image[:, :, (2, 1, 0)]
+    image = image.astype(np.uint8)
+    return image
+
+
+def plot_stuff(array, title=""):
+    global i
+    ax = plt.subplot(plot_y, plot_x, i)
+    ax.imshow(array, interpolation='nearest')
+    ax.set_title(title)
+    i += 1
+
+
+def clear_plot():
+    global i
+    i = 1
+    plt.clf()
+
 
 def run_triplet_flow_op(left, right, flow, occluded, margin=1):
     left_tensor = tf.constant(left)

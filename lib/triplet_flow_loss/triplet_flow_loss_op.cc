@@ -17,10 +17,11 @@ limitations under the License.
 
 #include <stdio.h>
 #include <cfloat>
-#include <math.h> 
+#include <math.h>
 #include <vector>
 #include <ctime>
 #include <cstdlib>
+#include <unistd.h>
 
 #include "third_party/eigen3/Eigen/Core"
 #include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
@@ -108,9 +109,9 @@ class TripletFlowOp : public OpKernel {
 		// number of channels
 		int feature_depth = left_data.dim_size(3);
 
-        //std::cout << "Image batch_size: " << batch_size << " height: " << height << " width: " << width << " feature_depth: " << feature_depth << std::endl;
-        //std::cout << "flow batch_size: " << flow_tensor.dim_size(0) << " height: " << flow_tensor.dim_size(1) << " width: " << flow_tensor.dim_size(2) << " feature_depth: " << flow_tensor.dim_size(3) << std::endl;
-        //std::cout << "occluded batch_size: " << occluded.dim_size(0) << " height: " << occluded.dim_size(1) << " width: " << occluded.dim_size(2) << std::endl;
+//        std::cout << "Image batch_size: " << batch_size << " height: " << height << " width: " << width << " feature_depth: " << feature_depth << std::endl;
+//        std::cout << "flow batch_size: " << flow_tensor.dim_size(0) << " height: " << flow_tensor.dim_size(1) << " width: " << flow_tensor.dim_size(2) << " feature_depth: " << flow_tensor.dim_size(3) << std::endl;
+//        std::cout << "occluded batch_size: " << occluded.dim_size(0) << " height: " << occluded.dim_size(1) << " width: " << occluded.dim_size(2) << std::endl;
 
         assert(batch_size == flow_tensor.dim_size(0));
         assert(batch_size == occluded.dim_size(0));
@@ -126,7 +127,7 @@ class TripletFlowOp : public OpKernel {
         // Create output loss tensor
 		int dim = 1;
 		TensorShape output_shape;
-		TensorShapeUtils::MakeShape(&dim, 1, &output_shape);
+//		TensorShapeUtils::MakeShape(&dim, 1, &output_shape);
 
 		Tensor* top_data_tensor = NULL;
 		OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &top_data_tensor));
@@ -145,15 +146,10 @@ class TripletFlowOp : public OpKernel {
 		T* bottom_right_diff = bottom_right_diff_tensor->template flat<T>().data();
 		memset(bottom_right_diff, 0, batch_size * height * width * feature_depth *sizeof(T));
 
-//        std::cout << "hi1" << std::endl;
-
 		// sample triplets to define the loss
 		// compute label indexes
-//		std::vector< std::vector<int> > label_indexes(num_classes);  // vectors of all labels with points
-//		std::vector< std::vector<int> > label_indexes_correct(num_classes);  // vectors of all labels of correctly labeled points
-//
+
 //		// classes in the batch
-//		std::vector<int> class_indexes;  // more compact label for all points
 
 		int saftey_margin = 2;  // the radius around the target where we shouldn't sample
 		// sampling
@@ -170,7 +166,8 @@ class TripletFlowOp : public OpKernel {
 					int index = n * height * width + h * width + w;
 					if(occluded_array[index] != 0)
 					{
-						break;  // don't use this point
+//                        std::cout << "point occluded, h: " << h << " w: " << w << std::endl;
+						continue;  // don't use this point
 					}
 
 					// find the corresponding pixel
@@ -182,8 +179,10 @@ class TripletFlowOp : public OpKernel {
                     }
 					float w_new = w + round(flow_array[index * 2]);
 					float h_new = h + round(flow_array[index * 2 + 1]);
-                    if(0 > w_new || 0 > h_new || width <= w_new || height <= h_new)
-                        break;  // corresponding right image location is outside image
+                    if(0 > w_new || 0 > h_new || width <= w_new || height <= h_new) {
+//                        std::cout << "flow goes outside image, h: " << h << " w: " << w << std::endl;
+                        continue;  // corresponding right image location is outside image
+                    }
                     int index_positive = n * height * width + h_new * width + w_new;
 
 					// sample a negative pixel
@@ -217,7 +216,7 @@ class TripletFlowOp : public OpKernel {
 		double loss = 0;
 		// for each triplet
 		int num_triplets = triplets.size() / 3;
-        std::cout << "num_triplets: " << num_triplets << std::endl;
+//        std::cout << "num_triplets: " << num_triplets << std::endl;
 		for (int triplet_num = 0; triplet_num < num_triplets; triplet_num++)
 		{
             const int index_i = triplets.at(triplet_num * 3 + 0);
@@ -254,11 +253,18 @@ class TripletFlowOp : public OpKernel {
             double dis = D_ij - D_ik + margin_;
 			T old_loss = loss;
             loss += std::max(dis, double(0.0));
+
+            if(num_triplets == 0){
+                std::cout << "loss will be nan! (" << loss << ")" << std::endl;
+            }
+
 			// std::cout << "dis: " << dis << " D_ij: " << D_ij << " D_ik: " << D_ik << std::endl;
-			if(old_loss > loss && dis > 0.0) {
+			if(old_loss > loss && dis > 0.0 && 1 < 0) {
 				std::cout << "loss overflowed, old_loss: " << old_loss << " loss: " << loss << std::endl;
 				assert(false);
 			}
+
+
 
             // compute gradients
             if (dis > 0) {
@@ -294,11 +300,11 @@ class TripletFlowOp : public OpKernel {
                 }
             }
 		}
-        std::cout << "pre-scaled loss: " << loss;
+//        std::cout << "pre-scaled loss: " << loss;
 		loss /= num_triplets * 2.0;
-        std::cout << " scaled loss: " << loss << std::endl;
-		top_data(0) = T(loss);
-
+//        std::cout << " scaled loss: " << loss << std::endl;
+//		top_data(0) = T(loss);
+        top_data.setConstant(T(loss));
 //        std::cout << "hi3" << std::endl;
 	}
 
@@ -437,8 +443,8 @@ public:
         // number of channels
         int num_channels = bottom_left_diff.dim_size(3);
 
-        std::cout << "batch_size: " << batch_size << " height: " << height << " width: " << width << " num_channels: " << num_channels << std::endl;
-        std::cout << "\tout_backprop dims: " << out_backprop.dims() << std::endl;
+//        std::cout << "batch_size: " << batch_size << " height: " << height << " width: " << width << " num_channels: " << num_channels << std::endl;
+//        std::cout << "\tout_backprop dims: " << out_backprop.dims() << std::endl;
 
         // construct the output shape
         TensorShape output_shape = bottom_left_diff.shape();

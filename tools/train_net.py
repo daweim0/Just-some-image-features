@@ -49,6 +49,9 @@ def parse_args():
     parser.add_argument('--network', dest='network_name',
                         help='name of the network',
                         default=None, type=str)
+    parser.add_argument('--n_cpu_threads', dest='n_cpu_threads',
+                        help='self explanatory',
+                        default=2, type=int)
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -77,15 +80,20 @@ if __name__ == '__main__':
     print 'Loaded dataset `{:s}` for training'.format(imdb.name)
     roidb = get_training_roidb(imdb)
 
+    if cfg.PUPPER_DATASET:
+        print 'Actually using Pupper dataset instead'
+        cfg.EXP_DIR = 'pupper_dataset'
+
     if not cfg.TRAIN.OPTICAL_FLOW:
         output_dir = get_output_dir(imdb, None)
         print 'Output will be saved to `{:s}`'.format(output_dir)
     else:
         output_dir = osp.abspath(osp.join(cfg.ROOT_DIR, 'output', cfg.EXP_DIR,
                                           "batch_size_" + str(cfg.TRAIN.IMS_PER_BATCH) + "_loss_" + str(cfg.LOSS_FUNC) +
-                                          "_optimizer_" + cfg.TRAIN.OPTIMIZER + "_conv_size_" + str(cfg.NET_CONF.COMBINE_CONVOLUTION_SIZE) +
-                                          "_ConcatSub_" + cfg.NET_CONF.CONCAT_OR_SUBTRACT +
-                                          "_n_convolutions_" + str(cfg.NET_CONF.N_CONVOLUTIONS) + "_" + str(datetime.date.today())))
+                                          "_optimizer_" + cfg.TRAIN.OPTIMIZER +
+                                          "_skip_link_1_" + str(cfg.NET_CONF.CONV1_SKIP_LINK) +
+                                          "_2_" + str(cfg.NET_CONF.CONV2_SKIP_LINK) +
+                                          "_3_" + str(cfg.NET_CONF.CONV3_SKIP_LINK) + "_" + str(datetime.date.today())))
         print 'Output will be saved to `{:s}`'.format(output_dir)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -116,7 +124,7 @@ if __name__ == '__main__':
     elif cfg.TRAIN.OPTICAL_FLOW:
         train_flow(network, imdb, roidb, output_dir,
                   pretrained_model=pretrained_model,
-                  max_iters=args.max_iters)
+                  max_iters=args.max_iters, n_cpu_threads=args.n_cpu_threads)
     else:
         train_net(network, imdb, roidb, output_dir,
               pretrained_model=pretrained_model,

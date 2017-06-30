@@ -17,8 +17,8 @@ from triplet_flow_loss import triplet_flow_loss_op_grad
 # from gru3d import GRU3DCell
 # from vanilla2d import Vanilla2DCell
 # from add2d import Add2DCell
-import custom_gradient_checker as gradient_checker
-from tensorflow.python.framework import constant_op
+# import custom_gradient_checker as gradient_checker
+# from tensorflow.python.framework import constant_op
 
 DEFAULT_PADDING = 'SAME'
 
@@ -200,7 +200,7 @@ class Network(object):
             return tf.nn.bias_add(conv, biases, name=scope.name)
 
     @layer
-    def deconv(self, input, k_h, k_w, c_o, s_h, s_w, name, reuse=None, padding=DEFAULT_PADDING, trainable=True):
+    def deconv(self, input, k_h, k_w, c_o, s_h, s_w, name, reuse=None, padding=DEFAULT_PADDING, trainable=True, c_i=None):
         # type: (any, int, int, int, int, int, str, bool, str, bool) -> any
         """
         :param input: input tensor
@@ -216,7 +216,8 @@ class Network(object):
         :return:
         """
         self.validate_padding(padding)
-        c_i = input.get_shape()[-1]
+        if c_i is None:
+            c_i = input.get_shape()[-1]
         with tf.variable_scope(name, reuse=reuse) as scope:
             # Compute shape out of input
             in_shape = tf.shape(input)
@@ -247,7 +248,7 @@ class Network(object):
         output = triplet_flow_loss_op.triplet_flow_loss(self.get_output(input[0]), self.get_output(input[1]),
                                                       self.get_output(input[2]), self.get_output(input[3]), margin, name=name)
 
-        return tf.Print(output[0], [output[0]], message="triplet_flow_loss output", name="loss"), output[1], output[2]
+        return output
     
     
     def test_triplet_flow_loss(self, session, input_dimensions, left_input, right_input, flow_input, mask_input, margin):
@@ -332,6 +333,10 @@ class Network(object):
                               name=name)
 
     @layer
+    def cast(self, input, target_dtype, name):
+        return tf.cast(input, target_dtype, name=name)
+
+    @layer
     def lrn(self, input, radius, alpha, beta, name, bias=1.0):
         return tf.nn.local_response_normalization(input,
                                                   depth_radius=radius,
@@ -351,6 +356,14 @@ class Network(object):
     @layer
     def add_immediate(self, input, value, name):
         return tf.add(input, value, name=name)
+
+    @layer
+    def mult_immediate(self, input, value, name):
+        return tf.multiply(input, value, name=name)
+
+    @layer
+    def div_immediate(self, input, value, name):
+        return tf.divide(input, value, name=name)
 
     @layer
     def subtract(self, inputs, name):

@@ -67,7 +67,7 @@ class SolverWrapper(object):
         global pause_data_input
         """Network training loop."""
         # add summary
-        tf.summary.tensor_summary('loss', loss)
+        tf.summary.scalar('loss', loss)
         merged = tf.summary.merge_all()
         train_writer = tf.summary.FileWriter(self.output_dir, sess.graph)
 
@@ -312,7 +312,7 @@ def loss_cross_entropy_single_frame(scores, labels):
     return loss
 
 
-def train_flow(network, imdb, roidb, output_dir, pretrained_model=None, max_iters=40000):
+def train_flow(network, imdb, roidb, output_dir, pretrained_model=None, max_iters=40000, n_cpu_threads=1):
     """Train a Fast R-CNN network."""
     # loss = network.get_output('triplet_flow_loss_name').loss
     loss = network.get_output('triplet_flow_loss_name')[0]
@@ -331,7 +331,7 @@ def train_flow(network, imdb, roidb, output_dir, pretrained_model=None, max_iter
     else:
         assert False, "An optimizer must be specified"
 
-    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
+    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=n_cpu_threads)) as sess:
         # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         # sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
 

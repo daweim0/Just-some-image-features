@@ -33,7 +33,7 @@ def setcols(r, g, b, k):
 
 def makecolorwheel():
     # relative lengths of color transitions:
-    # these are chosen based on perceptual similarity
+    # these are chosen based on/home/davidm/DA-RNN/DA-RNN/lib/utils/test_triplet_flow_loss.py perceptual similarity
     # (e.g. one can distinguish more shades between red and yellow
     #  than between yellow and green)
     RY = 15
@@ -70,6 +70,34 @@ def makecolorwheel():
 makecolorwheel()
 
 
+def custom_color_from_flow(flow_arr):
+    # (np.ndaray) -> np.ndarray
+    # output = np.dstack([np.zeros(flow_arr.shape[:2]), flow_arr[:, :, 0], flow_arr[:, :, 1]]) / (np.abs(flow_arr).max() * 2)
+    output = np.dstack([np.zeros(flow_arr.shape[:2]), flow_arr[:, :, 0], flow_arr[:, :, 1]]).astype(np.float32) / 10
+    output[0, 0] = [1, 1, 1]
+    # output += [0, 0.5, 0.5]
+    return output
+
+
+def colorize_features(features, scale_low=None, scale_high=None, get_scale=False):
+    # (np.ndarray) -> np.ndarray
+    features = np.squeeze(features)
+    split = features.shape[2] / 3
+    colors = np.dstack([np.sum(features[:, :, 0:split], axis=2), np.sum(features[:, :, split:2*split], axis=2),
+                      np.sum(features[:, :, 2*split:], axis=2)])
+    if scale_low is None:
+        scale_low = colors.min()
+    if scale_high is None:
+        scale_high = colors.max()
+
+    if get_scale:
+        return scale_low, scale_high
+    else:
+        colors = (colors - scale_low) / (scale_high - scale_low)
+        colors[0, 0] = [1, 1, 1]
+        return colors
+
+
 def sintel_compute_color(data_interlaced):
     # type: (np.ndarray) -> np.ndarray
     data_u_in, data_v_in = np.split(data_interlaced, 2, axis=2)
@@ -95,6 +123,14 @@ def sintel_compute_color(data_interlaced):
 
     col = 1 - rad[..., np.newaxis] * (1 - col)  # increase saturation with radius
     return col
+
+
+def calculate_EPE(gt, pred):
+    # calculates average end point error
+    square = np.square(gt - pred)
+    sum = np.sum(square, axis=2)
+    sqrt = np.sqrt(sum)
+    return np.mean(sqrt)
 
 
 if __name__ == "__main__":

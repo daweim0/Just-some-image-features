@@ -29,6 +29,11 @@ import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
+import random
+
+# import pyximport; pyximport.install()
+# from triplet_flow_loss import slow_flow_calculator_cython
+from triplet_flow_loss.run_slow_flow_calculator_process import get_flow_parallel
 
 def _get_image_blob(im, im_depth, meta_data):
     """Converts an image into a network input.
@@ -315,7 +320,7 @@ def vis_segmentations(im, im_depth, labels, labels_gt, colors):
 # test flow
 ###################
 def test_flow_net(sess, net, imdb, weights_filename, n_images = None, save_image=False, training_iter='',
-                  calculate_EPE_all_data=False):
+                  calculate_EPE_all_data=True):
 
     if weights_filename is not None:
         output_dir = get_output_dir(imdb, weights_filename)
@@ -332,18 +337,31 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images = None, save_image
     for i in range(n_images):
         index = roidb_ordering[i]
         images = imdb.roidb[index]
-        predicted_flow = siphon_flow_single_frame(sess, net, images['image_left'], images['image_right'])['flow']
+        # predicted_flow = siphon_flow_single_frame(sess, net, images['image_left'], images['image_right'])['flow']
         gt_flow = sintel_utils.read_flow_file_with_path(images['flow']).transpose([1, 0, 2])
-        gt_flow = cv2.resize(gt_flow, None, None, fx=cfg.TRAIN.SCALES_BASE[0], fy=cfg.TRAIN.SCALES_BASE[0],
-                             interpolation=cv2.INTER_LINEAR)
-        predicted_flow = np.squeeze(predicted_flow[0])[0:gt_flow.shape[0], 0:gt_flow.shape[1], :]
+        # gt_flow = cv2.resize(gt_flow, None, None, fx=cfg.TRAIN.SCALES_BASE[0], fy=cfg.TRAIN.SCALES_BASE[0],
+        #                      interpolation=cv2.INTER_LINEAR)
+        # predicted_flow = np.squeeze(predicted_flow[0])[0:gt_flow.shape[0], 0:gt_flow.shape[1], :]
 
-        average_EPE = calculate_EPE(gt_flow, predicted_flow)
-        zero_prediction_EPE = calculate_EPE(gt_flow, np.zeros(gt_flow.shape))
+        blobs = _get_flow_image_blob(images['image_left'], images['image_right'], 0)
+        left_blob = blobs[0]
+        right_blob = blobs[1]
+        network_inputs = {net.data_left: left_blob, net.data_right: right_blob,
+                          net.gt_flow: np.zeros(list(right_blob.shape[:3]) + list([2]), dtype=np.float32),
+                          net.occluded: np.zeros(list(right_blob.shape[:3]) + list([1]), dtype=np.int32), net.keep_prob: 1.0}
+        network_outputs = [net.get_output('upscore_l'), net.get_output('upscore_r'),
+                                 net.get_output('gt_flow')]
+        features = siphon_outputs_single_frame(sess, net, network_inputs, network_outputs)
+        predicted_flow = get_flow_parallel(np.squeeze(features[0]), np.squeeze(features[1]),
+                                                                  np.zeros(features[0].shape[1:3], dtype=np.int32), neighborhood_len_import=140)
+
+        predicted_flow_cropped = predicted_flow[:gt_flow.shape[0], :gt_flow.shape[1]]
+        average_EPE = sintel_utils.calculate_EPE(gt_flow, predicted_flow_cropped)
+        zero_prediction_EPE = sintel_utils.calculate_EPE(gt_flow, np.zeros(gt_flow.shape))
 
         if calculate_EPE_all_data:
-            # path_segments = str(images['image_left']).split("/")
-            # print ("EPE is %7.4f for " % average_EPE) + path_segments[-3] + "/" + path_segments[-2] + "/" + path_segments[-1]
+            path_segments = str(images['image_left']).split("/")
+            print ("EPE is %7.4f for " % average_EPE) + path_segments[-3] + "/" + path_segments[-2] + "/" + path_segments[-1]
             EPE_list.append(average_EPE)
         else:
             predicted_flow_im = sintel_utils.sintel_compute_color(predicted_flow)
@@ -351,29 +369,29 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images = None, save_image
             fig = plt.figure()
             # show left
             im_left = mpimg.imread(images['image_left'])
-            ax1 = fig.add_subplot(321)
+            ax1 = fig.add_subplot(331)
             ax1.imshow(im_left)
             ax1.set_title("left image")
 
             # show right
             im_right = mpimg.imread(images['image_right'])
-            ax2 = fig.add_subplot(322)
+            ax2 = fig.add_subplot(332)
             ax2.imshow(im_right)
             ax2.set_title("right image")
 
             # gt_flow
-            ax3 = fig.add_subplot(323)
+            ax3 = fig.add_subplot(333)
             ax3.imshow(gt_flow_im)
             ax3.set_title("gt flow")
 
             # show predicted flow
-            ax4 = fig.add_subplot(324)
+            ax4 = fig.add_subplot(334)
             ax4.imshow(predicted_flow_im)
             ax4.set_title("predicted flow")
 
             # show flow differences
             gt_components = np.split(gt_flow, 2, axis=2)
-            pred_components = np.split(predicted_flow, 2, axis=2)
+            pred_components = np.split(predicted_flow_cropped, 2, axis=2)
             gt_angle = np.arctan2(gt_components[1], gt_components[0])
             pred_angle = np.arctan2(pred_components[1], pred_components[0])
             gt_mag = np.sqrt(np.power(gt_components[0], 2)+ np.power(gt_components[1], 2))
@@ -381,18 +399,57 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images = None, save_image
 
             angle_dif = np.mod((gt_angle - pred_angle) + np.pi, np.pi * 2) - np.pi
 
-            ax5 = fig.add_subplot(325)
+            ax5 = fig.add_subplot(335)
             ax5.imshow(np.abs(angle_dif.squeeze()) / np.pi, cmap='Greys')
             ax5.set_title("direction difference")
             ax5.set_xlabel("white = no error, black = large error")
-            ax6 = fig.add_subplot(326)
+
+            ax6 = fig.add_subplot(336)
             ax6.imshow(np.abs(gt_mag - pred_mag).squeeze() / np.max(gt_mag), cmap='Greys')
             ax6.set_title("magnitude difference")
             ax6.set_xlabel("white = no error, black = large error")
 
+            ax7 = fig.add_subplot(337)
+            ax7.imshow(sintel_utils.custom_color_from_flow(predicted_flow))
+            ax7.set_title("raw flow")
+
+            ax_l_features = fig.add_subplot(338)
+            ax_l_features.imshow(sintel_utils.colorize_features(np.squeeze(features[0])))
+            ax_l_features.set_title("left features")
+
+            ax_r_features = fig.add_subplot(339)
+            ax_r_features.imshow(sintel_utils.colorize_features(np.squeeze(features[1])))
+            ax_r_features.set_title("right features")
+
             fig.suptitle('Image ' + str(images['image_left']) + '\naverage endpoint error: ' + str(average_EPE) +
                          ' (predicting no movement would result in EPE of ' + str(zero_prediction_EPE) + ')', fontsize=10)
 
+            x_points = list()
+            y_points = list()
+            x_points_right = list()
+            y_points_right = list()
+            colors = list()
+
+            def onclick(event):
+                print(
+                'button', event.button, 'x=', event.x, 'y=', event.y, 'xdata=', event.xdata, 'ydata=', event.ydata)
+                data_transformer = ax_l_features.transData.inverted()
+                x_left, y_left = data_transformer.transform([event.x, event.y])
+                print("\t x transformed:", x_left, "y transformed:", y_left)
+                if event.xdata is not None and event.ydata is not None:
+                    x_points_right.append(event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0]))
+                    y_points_right.append(event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1]))
+                    x_points.append(event.xdata)
+                    y_points.append(event.ydata)
+                    colors.append(random.random())
+
+                    ax_l_features.scatter(x_points, y_points, c=colors, s=5, marker='p')
+                    ax_r_features.scatter(x_points_right, y_points_right, c=colors, s=5, marker='p')
+                    fig.canvas.draw()
+
+            cid = fig.canvas.mpl_connect('button_press_event', onclick)
+
+            plt.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.9, wspace=0.1, hspace=0.07)
             if save_image:
                 plt.savefig("plot_" + str(training_iter) + "_" + str(i) + ".png")
             else:
@@ -402,13 +459,6 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images = None, save_image
         average = np.mean(EPE_list)
         print "# average EPE is " + str(average) + " for entire " + str(imdb._name) + " dataset with network " + \
             str(weights_filename)
-
-
-def calculate_EPE(gt, pred):
-    # calculates average end point error
-    return np.mean(np.sqrt(np.sum(np.square(gt - pred), axis=2)))
-
-assert calculate_EPE(np.zeros([3, 3, 2]), np.ones([3, 3, 2])) == 2 ** 0.5
 
 
 def calculate_flow_single_frame(sess, net, im_left, im_right):
@@ -441,6 +491,26 @@ def siphon_flow_single_frame(sess, net, im_left, im_right):
     sess.run(net.enqueue_op, feed_dict=feed_dict)
     output = sess.run({'flow':net.get_output('predicted_flow'), 'left':net.get_output('data_left_tap'),
                             'right':net.get_output('data_left_tap')})
+
+    for i in training_data_queue:
+        feed_dict = {net.data_left: i['left'], net.data_right: i['right'], net.gt_flow: i['flow'], net.keep_prob: i['keep_prob']}
+        sess.run(net.enqueue_op, feed_dict=feed_dict)
+
+    # assert sess.run(net.queue_size_op) == queue_start_size, "data queue size changed"
+    return output
+
+
+def siphon_outputs_single_frame(sess, net, data_feed_dict, outputs):
+    # compute image blob
+
+    training_data_queue = list()
+    queue_start_size = sess.run(net.queue_size_op)
+    while sess.run(net.queue_size_op) != 0:
+        training_data_queue.append(sess.run({'left':net.get_output('data_left'), 'right':net.get_output('data_right'),
+                                             'flow':net.get_output('gt_flow'), 'keep_prob':net.keep_prob_queue}))
+
+    sess.run(net.enqueue_op, feed_dict=data_feed_dict)
+    output = sess.run(outputs)
 
     for i in training_data_queue:
         feed_dict = {net.data_left: i['left'], net.data_right: i['right'], net.gt_flow: i['flow'], net.keep_prob: i['keep_prob']}
