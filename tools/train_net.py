@@ -47,7 +47,7 @@ def parse_args():
                         help='randomize (do not use a fixed seed)',
                         action='store_true')
     parser.add_argument('--network', dest='network_name',
-                        help='name of the network',
+                        help='no longer functional, use the cfg file to specify the correct network (yml)',
                         default=None, type=str)
     parser.add_argument('--n_cpu_threads', dest='n_cpu_threads',
                         help='self explanatory',
@@ -114,8 +114,8 @@ if __name__ == '__main__':
         pretrained_model = args.pretrained_model
 
     from networks.factory import get_network
-    network = get_network(args.network_name)
-    print 'Use network `{:s}` in training'.format(args.network_name)
+    network = get_network(cfg.NETWORK)
+    print 'Use network `{:s}` in training'.format(cfg.NETWORK)
 
     if cfg.TRAIN.GAN:
         train_gan(network, imdb, roidb, output_dir,

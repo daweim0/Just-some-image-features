@@ -154,7 +154,7 @@ class Network(object):
         return var
 
     @layer
-    def conv(self, input, k_h, k_w, c_o, s_h, s_w, name, reuse=None, relu=True, padding=DEFAULT_PADDING, group=1, trainable=True, biased=True, c_i=-1):
+    def conv(self, input, k_h, k_w, c_o, s_h, s_w, name, reuse=None, relu=True, padding=DEFAULT_PADDING, group=1, trainable=True, biased=True, c_i=-1, elu=False):
         self.validate_padding(padding)
         if isinstance(input, tuple):
             input = input[0]
@@ -180,7 +180,10 @@ class Network(object):
                 biases = self.make_var('biases', [c_o], init_biases, trainable)
                 output = tf.nn.bias_add(output, biases)
             if relu:
-                output = tf.nn.relu(output, name=scope.name)    
+                if elu:
+                    output = tf.nn.elu(output, name=scope.name)
+                else:
+                    output = tf.nn.relu(output, name=scope.name)
         return output
 
     @layer

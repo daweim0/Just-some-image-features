@@ -9,30 +9,45 @@
 
 __sets = {}
 
-import networks.vgg16
-import networks.vgg16_convs
-import networks.vgg16_gan
-import networks.vgg16_flow
-import networks.dcgan
-import networks.resnet50
+# import networks.vgg16
+# import networks.vgg16_convs
+# import networks.vgg16_gan
+# import networks.vgg16_flow
+# import networks.dcgan
+# import networks.resnet50
+
+import importlib
+import networks
+# from networks import *
+
 import tensorflow as tf
 from fcn.config import cfg
 
 if cfg.TRAIN.SINGLE_FRAME:
     if cfg.NETWORK == 'VGG16':
         __sets['vgg16_convs'] = networks.vgg16_convs(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.NUM_UNITS, cfg.TRAIN.SCALES_BASE, cfg.TRAIN.VERTEX_REG, cfg.TRAIN.TRAINABLE)
-    if cfg.NETWORK == 'VGG16GAN':
+    elif cfg.NETWORK == 'VGG16GAN':
         __sets['vgg16_gan'] = networks.vgg16_gan(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.NUM_UNITS, cfg.TRAIN.SCALES_BASE, cfg.TRAIN.VERTEX_REG, cfg.TRAIN.TRAINABLE)
-    if cfg.NETWORK == 'VGG16FLOW':
+    elif cfg.NETWORK == 'VGG16FLOW':
         __sets['vgg16_flow'] = networks.vgg16_flow(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.NUM_UNITS, cfg.TRAIN.SCALES_BASE, cfg.TRAIN.VERTEX_REG, cfg.TRAIN.TRAINABLE)
     elif cfg.NETWORK == 'VGG16_FLOW_FEATURES':
         __sets['vgg16_flow_features'] = networks.vgg16_flow_features(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.NUM_UNITS, cfg.TRAIN.SCALES_BASE, cfg.TRAIN.VERTEX_REG, cfg.TRAIN.TRAINABLE)
-    if cfg.NETWORK == 'DCGAN':
+    elif cfg.NETWORK == 'DCGAN':
         __sets['dcgan'] = networks.dcgan()
-    if cfg.NETWORK == 'RESNET50':
+    elif cfg.NETWORK == 'RESNET50':
         __sets['resnet50'] = networks.resnet50(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.SCALES_BASE)
-    if cfg.NETWORK == 'FCN8VGG':
+    elif cfg.NETWORK == 'FCN8VGG':
         __sets['fcn8_vgg'] = networks.fcn8_vgg(cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.MODEL_PATH)
+    else:
+        # this is very bad code, but it works. Using exec makes importing modules from their name as a string much
+        # easier. It also means that people could run arbitrary code if they can control the config file. The asserts
+        # do a little sensitization, but don't really make it "safe"
+        net_name = str(cfg.NETWORK)
+        assert(net_name.find(" ") == -1)
+        assert(net_name.find("\\") == -1)
+        exec(str("from networks." + net_name + " import " + net_name + " as net"))
+        exec("__sets[cfg.NETWORK] = net." + net_name + "(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.NUM_UNITS, cfg.TRAIN.SCALES_BASE, cfg.TRAIN.VERTEX_REG, cfg.TRAIN.TRAINABLE)")
+
 else:
     if cfg.NETWORK == 'VGG16FLOW':
         __sets['vgg16_flow'] = networks.vgg16_flow(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.NUM_UNITS, cfg.TRAIN.SCALES_BASE, cfg.TRAIN.VERTEX_REG, cfg.TRAIN.TRAINABLE)
