@@ -16,12 +16,16 @@ from utils.voxelizer import Voxelizer
 class GtFlowDataLayer(object):
     """FCN data layer used for training."""
 
-    def __init__(self, roidb, num_classes):
+    def __init__(self, roidb, num_classes, single=False):
         """Set the roidb to be used by this layer during training."""
         self._roidb = roidb
         self._num_classes = num_classes
         self._voxelizer = Voxelizer(cfg.TRAIN.GRID_SIZE, num_classes)
         self._shuffle_roidb_inds()
+        if single:
+            self._imgs_per_batch = 1
+        else:
+            self._imgs_per_batch = cfg.TRAIN.IMS_PER_BATCH
         # preload_data(self._roidb)
 
     def _shuffle_roidb_inds(self):
@@ -31,11 +35,11 @@ class GtFlowDataLayer(object):
 
     def _get_next_minibatch_inds(self):
         """Return the roidb indices for the next minibatch."""
-        if self._cur + cfg.TRAIN.IMS_PER_BATCH >= len(self._roidb):
+        if self._cur + self._imgs_per_batch >= len(self._roidb):
             self._shuffle_roidb_inds()
 
-        db_inds = self._perm[self._cur:self._cur + cfg.TRAIN.IMS_PER_BATCH]
-        self._cur += cfg.TRAIN.IMS_PER_BATCH
+        db_inds = self._perm[self._cur:self._cur + self._imgs_per_batch]
+        self._cur += self._imgs_per_batch
 
         return db_inds
 

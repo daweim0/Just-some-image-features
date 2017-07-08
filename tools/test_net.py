@@ -83,7 +83,7 @@ if __name__ == '__main__':
     cfg.TRAIN.TRAINABLE = False
 
     from networks.factory import get_network
-    network = get_network(args.network_name)
+    network = get_network(cfg.NETWORK)
     print '\n# Using network `{:s}` for testing (from folder `{:s}`'.format(args.network_name, args.model)
 
     # start a session

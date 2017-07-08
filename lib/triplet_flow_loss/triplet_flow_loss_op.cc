@@ -34,6 +34,16 @@ using namespace tensorflow;
 typedef Eigen::ThreadPoolDevice CPUDevice;
 
 
+int constrain(int val, int low, int high) {
+    if(val < low)
+        return low;
+    else if(val >= high - 1)
+        return high - 1;
+    else
+        return val;
+}
+
+
 REGISTER_OP("TripletFlow")
 	.Attr("T: {float, double}")
 	.Attr("margin: float")
@@ -151,11 +161,16 @@ class TripletFlowOp : public OpKernel {
 
 //		// classes in the batch
 
+        double loss = 0;
+        int num_triplets = 0;
+
 		int saftey_margin = 2;  // the radius around the target where we shouldn't sample
+        int negative_radius = 50; // the radius around the target the negative sample should be inside
+//        int sampling_density = 50;  // only use every 50th
 		// sampling
 		std::srand(unsigned (std::time(0)));
 		std::vector<int> triplets;  // don't initialize it with a size because some points might be occluded
-		triplets.reserve(batch_size * height * width * 3);
+//		triplets.reserve(batch_size * height * width * 3);
 		for (int n = 0; n < batch_size; n++)
 		{
 			for (int h = 0; h < height; h++)
@@ -177,129 +192,142 @@ class TripletFlowOp : public OpKernel {
                         std::cout << "\tindex*2+1: " << index*2+1 << std::endl;
                         assert(false);
                     }
+
 					float w_new = w + round(flow_array[index * 2]);
 					float h_new = h + round(flow_array[index * 2 + 1]);
                     if(0 > w_new || 0 > h_new || width <= w_new || height <= h_new) {
 //                        std::cout << "flow goes outside image, h: " << h << " w: " << w << std::endl;
                         continue;  // corresponding right image location is outside image
                     }
+
                     int index_positive = n * height * width + h_new * width + w_new;
 
 					// sample a negative pixel
 					// check the predicted label of this pixel for hard negative
 
-					int possible_h = std::rand() % (height - saftey_margin*2);
+//					int possible_h = std::rand() % (height - saftey_margin*2);
+//                    assert(0 <= possible_h < height - saftey_margin*2);
+//					int possible_w = std::rand() % (width - saftey_margin*2);
+//                    assert(0 <= possible_w < width - saftey_margin*2);
+
+					int possible_h = std::rand() % (negative_radius*2 - saftey_margin*2) - negative_radius - saftey_margin + h_new;
                     assert(0 <= possible_h < height - saftey_margin*2);
-					int possible_w = std::rand() % (width - saftey_margin*2);
+					int possible_w = std::rand() % (negative_radius*2 - saftey_margin*2) - negative_radius - saftey_margin + w_new;
                     assert(0 <= possible_w < width - saftey_margin*2);
 
 					if(possible_h + saftey_margin > h)
 						possible_h += saftey_margin * 2;
+                    possible_h = constrain(possible_h, 0, height);
 					if(possible_w + saftey_margin > w)
 						possible_w += saftey_margin * 2;
+                    possible_w = constrain(possible_w, 0, width);
 
 					int index_negative = ((n) * height + possible_h) * width + possible_w;
+//                    std::cout << "index_negative " << index_negative << " n " << n << " possible_h " << possible_h << " possible_w " << possible_w << std::endl;
 
-					// store the triplet
-					triplets.push_back(index);
-					triplets.push_back(index_positive);
-					triplets.push_back(index_negative);
+//					// store the triplet
+//					triplets.push_back(index);
+//					triplets.push_back(index_positive);
+//					triplets.push_back(index_negative);
                     assert(-1 < index && index < batch_size * height * width);
                     assert(-1 < index_positive && index_positive < batch_size * height * width);
                     assert(-1 < index_negative && index_negative < batch_size * height * width);
+
+
+
+
+
+
+                    num_triplets += 1;
+                    const int index_i = index;
+                    const int index_j = index_positive;
+                    const int index_k = index_negative;
+                    assert(-1 < index_j);
+
+                    // compute the distances
+                    T D_ij = 0;
+                    T D_ik = 0;
+                    for (int c = 0; c < feature_depth; c++)
+                    {
+                        int data_i_index = index_i * feature_depth + c;
+                        int data_j_index = index_j * feature_depth + c;
+                        int data_k_index = index_k * feature_depth + c;
+
+                        if ((0 > data_i_index) || (data_i_index >= feature_arr_size) ||
+                            (0 > data_j_index) || (data_j_index >= feature_arr_size) ||
+                            (0 > data_k_index) || (data_k_index >= feature_arr_size)) {
+                            std::cout << "index out of bounds" << std::endl;
+                            std::cout << "\t max index size: " << batch_size * height * width * feature_depth << std::endl;
+                            std::cout << "\t data_i_index: " <<  data_i_index << " index_i" << index_i << std::endl;
+                            std::cout << "\t data_j_index: " <<  data_j_index << " index_j" << index_j << std::endl;
+                            std::cout << "\t data_k_index: " <<  data_k_index << " index_k" << index_k << std::endl;
+                            assert(false);
+                        }
+
+//                std::cout << "hi 2.1" << std::endl;
+                        D_ij += pow(left_data_array[data_i_index] - right_data_array[data_j_index], 2);
+//                std::cout << "hi 2.2" << std::endl;
+                        D_ik += pow(left_data_array[data_i_index] - left_data_array[data_k_index], 2);
+                    }
+                    // add the loss
+                    double dis = D_ij - D_ik + margin_;
+                    T old_loss = loss;
+                    loss += std::max(dis, double(0.0));
+
+                    // std::cout << "dis: " << dis << " D_ij: " << D_ij << " D_ik: " << D_ik << std::endl;
+
+                    // compute gradients
+                    if (dis > 0) {
+                        for (int c = 0; c < feature_depth; c++)
+                        {
+                            int diff_i_index = index_i * feature_depth + c;
+                            int diff_j_index = index_j * feature_depth + c;
+                            int diff_k_index = index_k * feature_depth + c;
+
+                            if ((0 > diff_i_index) || (diff_i_index >= feature_arr_size) ||
+                                (0 > diff_j_index) || (diff_j_index >= feature_arr_size) ||
+                                (0 > diff_k_index) || (diff_k_index >= feature_arr_size)) {
+                                std::cout << "index out of bounds" << std::endl;
+                                std::cout << "\t max index size: " << batch_size * height * width * feature_depth << std::endl;
+                                std::cout << "\t diff_i_index: " <<  diff_i_index << std::endl;
+                                std::cout << "\t diff_j_index: " <<  diff_j_index << std::endl;
+                                std::cout << "\t diff_k_index: " <<  diff_k_index << std::endl;
+                                assert(false);
+                            }
+
+                            // update x_i
+//                    std::cout << "hi 2.3, diff_i_index =" << diff_i_index << std::endl;
+                            bottom_left_diff[diff_i_index] +=
+                                    (left_data_array[diff_k_index] - right_data_array[diff_j_index]) / num_triplets;
+                            // update x_j
+//                    std::cout << "hi 2.4, diff_j_index =" << diff_j_index << std::endl;
+                            bottom_right_diff[diff_j_index] +=
+                                    (right_data_array[diff_j_index] - left_data_array[diff_i_index]) / num_triplets;
+                            // update x_k
+//                    std::cout << "hi 2.5, diff_k_index =" << diff_k_index << std::endl;
+                            bottom_left_diff[diff_k_index] +=
+                                    (left_data_array[diff_i_index] - left_data_array[diff_k_index]) / num_triplets;
+                        }
+                    }
 				}
 			}
 		}
 
 //        std::cout << "hi2" << std::endl;
 
-		double loss = 0;
-		// for each triplet
-		int num_triplets = triplets.size() / 3;
-//        std::cout << "num_triplets: " << num_triplets << std::endl;
-		for (int triplet_num = 0; triplet_num < num_triplets; triplet_num++)
-		{
-            const int index_i = triplets.at(triplet_num * 3 + 0);
-            const int index_j = triplets.at(triplet_num * 3 + 1);
-            const int index_k = triplets.at(triplet_num * 3 + 2);
-            assert(-1 < index_j);
 
-            // compute the distances
-            T D_ij = 0;
-            T D_ik = 0;
-            for (int c = 0; c < feature_depth; c++)
-            {
-                int data_i_index = index_i * feature_depth + c;
-                int data_j_index = index_j * feature_depth + c;
-                int data_k_index = index_k * feature_depth + c;
-
-                if ((0 > data_i_index) || (data_i_index >= feature_arr_size) ||
-                    (0 > data_j_index) || (data_j_index >= feature_arr_size) ||
-                    (0 > data_k_index) || (data_k_index >= feature_arr_size)) {
-                    std::cout << "index out of bounds" << std::endl;
-                    std::cout << "\t max index size: " << batch_size * height * width * feature_depth << std::endl;
-                    std::cout << "\t data_i_index: " <<  data_i_index << " index_i" << index_i << std::endl;
-                    std::cout << "\t data_j_index: " <<  data_j_index << " index_j" << index_j << std::endl;
-                    std::cout << "\t data_k_index: " <<  data_k_index << " index_k" << index_k << std::endl;
-                    assert(false);
-                }
-
-//                std::cout << "hi 2.1" << std::endl;
-                D_ij += pow(left_data_array[data_i_index] - right_data_array[data_j_index], 2);
-//                std::cout << "hi 2.2" << std::endl;
-                D_ik += pow(left_data_array[data_i_index] - left_data_array[data_k_index], 2);
-            }
-            // add the loss
-            double dis = D_ij - D_ik + margin_;
-			T old_loss = loss;
-            loss += std::max(dis, double(0.0));
-
-            if(num_triplets == 0){
-                std::cout << "loss will be nan! (" << loss << ")" << std::endl;
-            }
-
-			// std::cout << "dis: " << dis << " D_ij: " << D_ij << " D_ik: " << D_ik << std::endl;
-			if(old_loss > loss && dis > 0.0 && 1 < 0) {
-				std::cout << "loss overflowed, old_loss: " << old_loss << " loss: " << loss << std::endl;
-				assert(false);
-			}
-
-
-
-            // compute gradients
-            if (dis > 0) {
-                for (int c = 0; c < feature_depth; c++) 
-                {
-                    int diff_i_index = index_i * feature_depth + c;
-                    int diff_j_index = index_j * feature_depth + c;
-                    int diff_k_index = index_k * feature_depth + c;
-
-                    if ((0 > diff_i_index) || (diff_i_index >= feature_arr_size) ||
-                        (0 > diff_j_index) || (diff_j_index >= feature_arr_size) ||
-                        (0 > diff_k_index) || (diff_k_index >= feature_arr_size)) {
-                        std::cout << "index out of bounds" << std::endl;
-                        std::cout << "\t max index size: " << batch_size * height * width * feature_depth << std::endl;
-                        std::cout << "\t diff_i_index: " <<  diff_i_index << std::endl;
-                        std::cout << "\t diff_j_index: " <<  diff_j_index << std::endl;
-                        std::cout << "\t diff_k_index: " <<  diff_k_index << std::endl;
-                        assert(false);
-                    }
-
-                    // update x_i
-//                    std::cout << "hi 2.3, diff_i_index =" << diff_i_index << std::endl;
-                    bottom_left_diff[diff_i_index] +=
-                            (left_data_array[diff_k_index] - right_data_array[diff_j_index]) / num_triplets;
-                    // update x_j
-//                    std::cout << "hi 2.4, diff_j_index =" << diff_j_index << std::endl;
-                    bottom_right_diff[diff_j_index] +=
-                            (right_data_array[diff_j_index] - left_data_array[diff_i_index]) / num_triplets;
-                    // update x_k
-//                    std::cout << "hi 2.5, diff_k_index =" << diff_k_index << std::endl;
-                    bottom_left_diff[diff_k_index] +=
-                            (left_data_array[diff_i_index] - left_data_array[diff_k_index]) / num_triplets;
-                }
-            }
-		}
+//		// for each triplet
+//		int num_triplets = triplets.size() / 3;
+//
+//        if(num_triplets == 0){
+//            std::cout << "loss will be nan! (" << loss << ")" << std::endl;
+//        }
+//
+////        std::cout << "num_triplets: " << num_triplets << std::endl;
+//		for (int triplet_num = 0; triplet_num < num_triplets; triplet_num++)
+//		{
+//
+//		}
 //        std::cout << "pre-scaled loss: " << loss;
 		loss /= num_triplets * 2.0;
 //        std::cout << " scaled loss: " << loss << std::endl;

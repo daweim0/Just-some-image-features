@@ -1,4 +1,4 @@
-EXP_DIR: sintel_albedo_more_skips
+EXP_DIR: sintel_albedo_small_training_set_fewer_skiplinks_trainable
 INPUT: LEFT_RIGHT_FLOW
 NETWORK: vgg16_flow_features_more
 LOSS_FUNC: L2
@@ -6,8 +6,8 @@ PUPPER_DATASET: False
 NET_CONF:
   MATCHING_STAGE_SCALE: 1.0
   CONV3_SKIP_LINK: True
-  CONV2_SKIP_LINK: True
-  CONV1_SKIP_LINK: True
+  CONV2_SKIP_LINK: False
+  CONV1_SKIP_LINK: False
 TRAIN:
   SINGLE_FRAME: True
   LEARNING_RATE: 0.0000000001
@@ -16,9 +16,9 @@ TRAIN:
   GAMMA: 0.1
   STEPSIZE: 15000
   SCALES_BASE: !!python/tuple [0.5]
-  IMS_PER_BATCH: 3
+  IMS_PER_BATCH: 4
   NUM_UNITS: 64
-  SNAPSHOT_ITERS: 100
+  SNAPSHOT_ITERS: 1000
   SNAPSHOT_INFIX: sintel_albedo
   SNAPSHOT_PREFIX: vgg16_flow
   USE_FLIPPED: False

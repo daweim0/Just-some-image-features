@@ -19,4 +19,7 @@ __all__ = [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('_
 from .dcgan import dcgan
 from .resnet50 import resnet50
 from .fcn8_vgg import fcn8_vgg
+
+from . import *
+
 from . import factory

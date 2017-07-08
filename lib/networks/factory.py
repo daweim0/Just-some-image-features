@@ -18,7 +18,7 @@ __sets = {}
 
 import importlib
 import networks
-# from networks import *
+from networks import *
 
 import tensorflow as tf
 from fcn.config import cfg
@@ -39,14 +39,9 @@ if cfg.TRAIN.SINGLE_FRAME:
     elif cfg.NETWORK == 'FCN8VGG':
         __sets['fcn8_vgg'] = networks.fcn8_vgg(cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.MODEL_PATH)
     else:
-        # this is very bad code, but it works. Using exec makes importing modules from their name as a string much
-        # easier. It also means that people could run arbitrary code if they can control the config file. The asserts
-        # do a little sensitization, but don't really make it "safe"
         net_name = str(cfg.NETWORK)
-        assert(net_name.find(" ") == -1)
-        assert(net_name.find("\\") == -1)
-        exec(str("from networks." + net_name + " import " + net_name + " as net"))
-        exec("__sets[cfg.NETWORK] = net." + net_name + "(cfg.INPUT, cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.NUM_UNITS, cfg.TRAIN.SCALES_BASE, cfg.TRAIN.VERTEX_REG, cfg.TRAIN.TRAINABLE)")
+        __sets[net_name] = locals()[net_name].custom_network()
+
 
 else:
     if cfg.NETWORK == 'VGG16FLOW':
@@ -57,9 +52,9 @@ else:
 
 def get_network(name):
     """Get a network by name."""
-    if not __sets.has_key(name):
-        raise KeyError('Unknown network: {}'.format(name))
-    return __sets[name]
+    if not __sets.has_key(str(name).lower()):
+        raise KeyError('Unknown network: {}'.format(str(name).lower()))
+    return __sets[str(name).lower()]
 
 def list_networks():
     """List all registered imdbs."""

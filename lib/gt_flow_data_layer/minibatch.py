@@ -161,7 +161,7 @@ def _get_image_blob(roidb, scale_ind):
             pup = im_left_processed
 
             try:
-                image_height = int(500/16)*16
+                image_height = int(400/16)*16
                 image_width = int(600/16)*16
                 flow_size = 6
                 noise = hash(str(float(iter_num) + 3.14159001))

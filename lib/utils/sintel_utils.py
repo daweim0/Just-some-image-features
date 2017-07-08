@@ -110,7 +110,7 @@ def sintel_compute_color(data_interlaced):
 
     # now do the stuff done in computeColor()
     rad = np.sqrt(np.power(fx, 2) + np.power(fy, 2))
-    a = np.arctan2(-fy, -fx) / np.pi
+    a = np.nan_to_num(np.arctan2(-fy, -fx) / np.pi)
     fk = (a + 1.0) / 2.0 * (ncols-1)
     k0 = fk.astype(np.int32)
     k1 = ((k0 + 1) % ncols).astype(np.int32)

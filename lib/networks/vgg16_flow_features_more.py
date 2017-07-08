@@ -4,14 +4,14 @@ from fcn.config import cfg
 zero_out_module = tf.load_op_library('lib/triplet_flow_loss/triplet_flow_loss.so')
 
 
-class vgg16_flow_features_more(Network):
-    def __init__(self, input_format, num_classes, num_units, scales, vertex_reg=False, trainable=True):
-        self.inputs = []
-        self.input_format = input_format
+class custom_network(Network):
+    def __init__(self):
+        self.inputs = cfg.INPUT
+        # self.input_format = input_format
         self.num_output_dimensions = 2  # formerly num_classes
-        self.num_units = num_units
-        self.scale = 1 / scales[0]
-        self.vertex_reg = vertex_reg
+        self.num_units = cfg.TRAIN.NUM_UNITS
+        self.scale = 1 / cfg.TRAIN.SCALES_BASE[0]
+        self.vertex_reg = cfg.TRAIN.VERTEX_REG
 
         self.data_left = tf.placeholder(tf.float32, shape=[None, None, None, 3])
         self.data_right = tf.placeholder(tf.float32, shape=[None, None, None, 3])
@@ -27,11 +27,11 @@ class vgg16_flow_features_more(Network):
 
         self.close_queue_op = self.q.close(cancel_pending_enqueues=True)
         self.queue_size_op = self.q.size('queue_size')
-        self.trainable = trainable
+        self.trainable = cfg.TRAIN.TRAINABLE
         self.setup()
 
     def setup(self):
-        trainable = False
+        trainable = True
         reuse = True
 
         # left tower

@@ -47,6 +47,9 @@ cdef np.ndarray[np.float32_t, ndim=2] compute_flow_helper(np.ndarray[np.float32_
     cdef float current_dist, best_dist, temp, temp2, best_index_u, best_index_v, best_a, best_b
     cdef int i, j, a, b, k, kk
 
+    cdef int u1, u2, v1, v2
+    cdef float dist1, dist2
+
     # cdef np.ndarray[np.float32_t, ndim=2] flow_arr
     # cdef np.ndarray[np.float_t, ndims=3] left_features = np.array(left_features)
     # cdef np.ndarray[np.float_t, ndims=3] right_features = np.array(right_features)
@@ -89,34 +92,64 @@ cdef np.ndarray[np.float32_t, ndim=2] compute_flow_helper(np.ndarray[np.float32_
                         best_index_u = a
                         best_index_v = b
 
-            if interpolate_after == 1:
-                best_a = best_index_u
-                best_b = best_index_v
-                temp = 9999999
-                if best_index_u < right_len_0 and dist(left_features, right_features, i, j, <int> best_index_u + 1, <int> best_index_v, feature_depth) < temp:
-                    best_a = best_index_u + 1
-                    best_b = best_index_v
-                    temp = dist(left_features, right_features, i, j, <int> best_a, <int> best_b, feature_depth)
-                if best_index_v + 1 < right_len_1 and dist(left_features, right_features, i, j, <int> best_index_u , <int> best_index_v + 1, feature_depth) < temp:
-                    best_a = best_index_u
-                    best_b = best_index_v + 1
-                    temp = dist(left_features, right_features, i, j, <int> best_a, <int> best_b, feature_depth)
-                if best_index_v - 1 >= 0 and dist(left_features, right_features, i, j, <int> best_index_u , <int> best_index_v - 1, feature_depth) < temp:
-                    best_a = best_index_u
-                    best_b = best_index_v - 1
-                    temp = dist(left_features, right_features, i, j, <int> best_a, <int> best_b, feature_depth)
-                if best_index_u - 1 >= 0 and dist(left_features, right_features, i, j, <int> best_index_u - 1, <int> best_index_v , feature_depth) < temp:
-                    best_a = best_index_u - 1
-                    best_b = best_index_v
-                    temp = dist(left_features, right_features, i, j, <int> best_a, <int> best_b, feature_depth)
-                temp2 = dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
 
-                best_index_u = temp / (temp + temp2) * best_a + temp2 / (temp + temp2) * best_index_u
-                best_index_v = temp / (temp + temp2) * best_b + temp2 / (temp + temp2) * best_index_v
+            if interpolate_after == 1:
+                u1 = <int> best_index_u - 1
+                if u1 < 0:
+                    u1 = 0
+                if u1 >= right_len_1 - 3:
+                    u1 = right_len_1 - 3
+                u2 = u1 + 2
+
+                dist1 = dist(left_features, right_features, i, j, u1, j, feature_depth)
+                dist2 = dist(left_features, right_features, i, j, u2, j, feature_depth)
+                best_index_u = dist1 / (dist1 + dist2) * u1 + dist2 / (dist1 + dist2) * u2
+
+
+                v1 = <int> best_index_v - 1
+                if v1 < 0:
+                    v1 = 0
+                if v1 >= right_len_0 - 3:
+                    v1 = right_len_0 - 3
+                v2 = v1 + 2
+
+                dist1 = dist(left_features, right_features, i, j, i, v1, feature_depth)
+                dist2 = dist(left_features, right_features, i, j, i, v2, feature_depth)
+                best_index_v = dist1 / (dist1 + dist2) * u1 + dist2 / (dist1 + dist2) * u2
 
 
             flow_arr[i, j, 1] = <float> (best_index_u - i)
             flow_arr[i, j, 0] = <float> (best_index_v - j)
+
+
+            # if interpolate_after == 1:
+            #     best_a = best_index_u
+            #     best_b = best_index_v
+            #     temp = 9999999
+            #     if best_index_u < right_len_0 and dist(left_features, right_features, i, j, <int> best_index_u + 1, <int> best_index_v, feature_depth) < temp:
+            #         best_a = best_index_u + 1
+            #         best_b = best_index_v
+            #         temp = dist(left_features, right_features, i, j, <int> best_a, <int> best_b, feature_depth)
+            #     if best_index_v + 1 < right_len_1 and dist(left_features, right_features, i, j, <int> best_index_u , <int> best_index_v + 1, feature_depth) < temp:
+            #         best_a = best_index_u
+            #         best_b = best_index_v + 1
+            #         temp = dist(left_features, right_features, i, j, <int> best_a, <int> best_b, feature_depth)
+            #     if best_index_v - 1 >= 0 and dist(left_features, right_features, i, j, <int> best_index_u , <int> best_index_v - 1, feature_depth) < temp:
+            #         best_a = best_index_u
+            #         best_b = best_index_v - 1
+            #         temp = dist(left_features, right_features, i, j, <int> best_a, <int> best_b, feature_depth)
+            #     if best_index_u - 1 >= 0 and dist(left_features, right_features, i, j, <int> best_index_u - 1, <int> best_index_v , feature_depth) < temp:
+            #         best_a = best_index_u - 1
+            #         best_b = best_index_v
+            #         temp = dist(left_features, right_features, i, j, <int> best_a, <int> best_b, feature_depth)
+            #     temp2 = dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
+            #
+            #     best_index_u = temp / (temp + temp2) * best_a + temp2 / (temp + temp2) * best_index_u
+            #     best_index_v = temp / (temp + temp2) * best_b + temp2 / (temp + temp2) * best_index_v
+            #
+            #
+            # flow_arr[i, j, 1] = <float> (best_index_u - i)
+            # flow_arr[i, j, 0] = <float> (best_index_v - j)
         # flow_arr[threadid(), j, 0] = <float> (9000 + threadid())
 
     return np.asarray(flow_arr)
