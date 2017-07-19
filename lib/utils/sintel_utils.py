@@ -70,13 +70,13 @@ def makecolorwheel():
 makecolorwheel()
 
 
-def custom_color_from_flow(flow_arr):
+def raw_color_from_flow(flow_arr):
     # (np.ndaray) -> np.ndarray
     # output = np.dstack([np.zeros(flow_arr.shape[:2]), flow_arr[:, :, 0], flow_arr[:, :, 1]]) / (np.abs(flow_arr).max() * 2)
     output = np.dstack([np.zeros(flow_arr.shape[:2]), flow_arr[:, :, 0], flow_arr[:, :, 1]]).astype(np.float32) / 10
     output[0, 0] = [1, 1, 1]
     # output += [0, 0.5, 0.5]
-    return output
+    return np.abs(output)
 
 
 def colorize_features(features, scale_low=None, scale_high=None, get_scale=False):

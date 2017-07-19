@@ -19,6 +19,7 @@ class sintel_clean(datasets.imdb):
             else sintel_path
         self._data_path = os.path.join(self._sintel_path)
         self._flow_path = os.path.join(self._sintel_path + "/../flow")
+        self._occluded_path = os.path.join(self._sintel_path + "/../occlusions")
 
         self._classes = ()
 
@@ -72,6 +73,15 @@ class sintel_clean(datasets.imdb):
         assert os.path.exists(flow_path), \
             'Path does not exist: {}'.format(flow_path)
         return flow_path
+
+    def occluded_path_from_index(self, index):
+        """
+        Construct an depth path from the image's "index" identifier.
+        """
+        occluded_path = os.path.join(self._occluded_path, index.split()[0], "frame_" + index.split()[1] + self._image_ext)
+        assert os.path.exists(occluded_path), \
+            'Path does not exist: {}'.format(occluded_path)
+        return occluded_path
 
     # # label
     # def label_path_at(self, i):
@@ -181,6 +191,7 @@ class sintel_clean(datasets.imdb):
         return gt_roidb
 
     def _load_sintel_annotation(self, index):
+        # (str) -> dict
         """
         Load class name and meta data
         """
@@ -190,6 +201,9 @@ class sintel_clean(datasets.imdb):
 
         # flow path
         flow_path = self.flow_path_from_index(index)
+
+        # occluded path
+        occluded_path = self.occluded_path_from_index(index)
 
         # # depth path
         # depth_path = self.depth_path_from_index(index)
@@ -206,7 +220,8 @@ class sintel_clean(datasets.imdb):
 
         return {'image_left': first_image_path,
                 'image_right': second_image_path,
-                'flow': flow_path}
+                'flow': flow_path,
+                'occluded': occluded_path}
 
     def _process_label_image(self, label_image):
         """

@@ -247,10 +247,10 @@ class Network(object):
     #     return triplet_loss_op.triplet_loss(input[0], input[1], tf.cast(input[2], tf.int32), margin, name=name)
 
     @layer
-    def triplet_flow_loss(self, input, margin, name):
+    def triplet_flow_loss(self, input, margin, negative_radius, name):
         output = triplet_flow_loss_op.triplet_flow_loss(self.get_output(input[0]), self.get_output(input[1]),
-                                                      self.get_output(input[2]), self.get_output(input[3]), margin, name=name)
-
+                                                      self.get_output(input[2]), self.get_output(input[3]),
+                                                        margin, negative_radius, name=name)
         return output
     
     
@@ -324,6 +324,16 @@ class Network(object):
                               ksize=[1, k_h, k_w, 1],
                               strides=[1, s_h, s_w, 1],
                               padding=padding,
+                              name=name)
+
+
+    @layer
+    def max_pool_int(self, input, k_h, k_w, s_h, s_w, name, padding=DEFAULT_PADDING):
+        self.validate_padding(padding)
+        return tf.cast(tf.nn.max_pool(input,
+                              ksize=[1, k_h, k_w, 1],
+                              strides=[1, s_h, s_w, 1],
+                              padding=padding), dtype=tf.int32,
                               name=name)
 
     @layer

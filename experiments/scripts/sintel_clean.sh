@@ -13,9 +13,9 @@ echo Logging output to "$LOG"
 # train FCN for single frames
 export LD_PRELOAD=/usr/lib/libtcmalloc.so.4
 ./tools/train_net.py --gpu 0 \
-  --network vgg16_flow \
+  --network vgg16_flow_features \
   --weights data/imagenet_models/vgg16_convs.npy \
-  --imdb sintel_albedo_train \
+  --imdb sintel_clean_train \
   --cfg experiments/cfgs/sintel_clean.yml \
   --iters 40000
 

@@ -20,6 +20,7 @@ import sys
 import threading
 from tensorflow.python import debug as tf_debug
 import test
+from utils.yellowfin import YFOptimizer
 
 
 pause_data_input = False
@@ -63,7 +64,7 @@ class SolverWrapper(object):
         print 'Wrote snapshot to: {:s}'.format(filename)
 
 
-    def train_model(self, sess, train_op, loss, learning_rate, max_iters, net=None, imdb = None, ):
+    def train_model(self, sess, train_op, loss, learning_rate, max_iters, net=None, imdb = None, momentum_op=None):
         global pause_data_input
         """Network training loop."""
         # add summary
@@ -100,12 +101,16 @@ class SolverWrapper(object):
             while sess.run(net.queue_size_op) == 0:
                 time.sleep(0.005)
 
-            summary, loss_value, lr, _ = sess.run([merged, loss, learning_rate, train_op])
+            if momentum_op != None:
+                summary, loss_value, lr, _, momentum = sess.run([merged, loss, learning_rate, train_op, momentum_op,])
+            else:
+                summary, loss_value, lr, _ = sess.run([merged, loss, learning_rate, train_op, ])
+                momentum = cfg.TRAIN.MOMENTUM
             train_writer.add_summary(summary, iter)
             timer.toc()
             
-            print 'iter: %d / %d, loss: %7.4f, lr: %.8f, time: %1.2f, queue size before training op: %3i' %\
-                    (iter+1, max_iters, loss_value, lr, timer.diff, queue_size)
+            print 'iter: %d / %d, loss: %7.4f, lr: %.8f, momentum: %2.2f, time: %1.2f, queue size before training op: %3i' %\
+                    (iter+1, max_iters, loss_value, lr, momentum, timer.diff, queue_size)
             loss_history.append(loss_value)
 
             if (iter+1) % cfg.TRAIN.DISPLAY == 0:
@@ -314,20 +319,29 @@ def loss_cross_entropy_single_frame(scores, labels):
 
 def train_flow(network, imdb, roidb, output_dir, pretrained_model=None, max_iters=40000, n_cpu_threads=1):
     """Train a Fast R-CNN network."""
-    # loss = network.get_output('triplet_flow_loss_name').loss
-    loss = network.get_output('triplet_flow_loss_name')[0]
+    # loss = network.get_output('final_triplet_loss').loss
+    loss = network.get_output('final_triplet_loss')[0]
 
     # optimizer
     global_step = tf.Variable(0, trainable=False)
-    if cfg.TRAIN.OPTIMIZER == 'MomentumOptimizer':
+    if cfg.TRAIN.OPTIMIZER.lower() == 'momentumoptimizer' or cfg.TRAIN.OPTIMIZER.lower() == 'momentum':
         starter_learning_rate = cfg.TRAIN.LEARNING_RATE
         learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
                                                    cfg.TRAIN.STEPSIZE, 0.1, staircase=True)
         momentum = cfg.TRAIN.MOMENTUM
         train_op = tf.train.MomentumOptimizer(learning_rate, momentum).minimize(loss, global_step=global_step)
-    elif cfg.TRAIN.OPTIMIZER == 'ADAM':
+        momentum_op = None
+
+    elif cfg.TRAIN.OPTIMIZER.lower() == 'adam':
         train_op = tf.train.AdamOptimizer(learning_rate=cfg.TRAIN.LEARNING_RATE_ADAM).minimize(loss, global_step=global_step)
         learning_rate = tf.constant(cfg.TRAIN.LEARNING_RATE_ADAM)
+        momentum_op = None
+
+    elif cfg.TRAIN.OPTIMIZER.lower() == 'yellowfin':
+        optimizer = YFOptimizer(zero_debias=False, learning_rate=cfg.TRAIN.LEARNING_RATE, momentum=0.0)
+        train_op = optimizer.minimize(loss, global_step=global_step)
+        learning_rate = optimizer.get_lr_tensor()
+        momentum_op = optimizer.get_mu_tensor()
     else:
         assert False, "An optimizer must be specified"
 
@@ -346,7 +360,7 @@ def train_flow(network, imdb, roidb, output_dir, pretrained_model=None, max_iter
             t.start()
 
         print 'Solving...'
-        sw.train_model(sess, train_op, loss, learning_rate, max_iters, net = network, imdb=imdb)
+        sw.train_model(sess, train_op, loss, learning_rate, max_iters, net = network, imdb=imdb, momentum_op=momentum_op)
         print 'done solving'
 
         sess.run(network.close_queue_op)

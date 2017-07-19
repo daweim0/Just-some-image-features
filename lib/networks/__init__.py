@@ -14,6 +14,7 @@ from .vgg16_flow_features import vgg16_flow_features
 from os.path import dirname, basename, isfile
 import glob
 modules = glob.glob(dirname(__file__)+"/vgg*.py")
+modules.extend(glob.glob(dirname(__file__)+"/net*.py"))
 __all__ = [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]
 
 from .dcgan import dcgan

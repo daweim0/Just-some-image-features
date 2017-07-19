@@ -40,6 +40,7 @@ if cfg.TRAIN.SINGLE_FRAME:
         __sets['fcn8_vgg'] = networks.fcn8_vgg(cfg.TRAIN.NUM_CLASSES, cfg.TRAIN.MODEL_PATH)
     else:
         net_name = str(cfg.NETWORK)
+        # an error here probably means the network name is incorrect
         __sets[net_name] = locals()[net_name].custom_network()
 
 

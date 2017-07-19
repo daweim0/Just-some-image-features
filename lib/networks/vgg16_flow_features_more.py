@@ -189,7 +189,7 @@ class custom_network(Network):
 
         # triplet loss
         (self.feed(['upscore_l', 'upscore_r', 'gt_flow', 'occluded'])
-            .triplet_flow_loss(margin=1, name="triplet_flow_loss_name"))
+            .triplet_flow_loss(margin=1.0, negative_radius=cfg.NET_CONF.NEGATIVE_RADIUS, name="triplet_flow_loss_name"))
 
         (self.feed('gt_flow')
          .avg_pool(2, 2, 2, 2, name='flow_pool1')

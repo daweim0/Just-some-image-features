@@ -135,10 +135,10 @@ def test_loss(network, roidb, pretrained_model=None):
 
             plot_stuff(fix_rgb_image(left_blob[0]), "left image")
             plot_stuff(fix_rgb_image(right_blob[0]), "right image")
-            plot_stuff(sintel_utils.custom_color_from_flow(gt_flow), "gt flow")
+            plot_stuff(sintel_utils.raw_color_from_flow(gt_flow), "gt flow")
             plot_stuff(sintel_utils.colorize_features(left_features, scale_low=scale_low, scale_high=scale_high), "left features")
             plot_stuff(sintel_utils.colorize_features(right_features), "right features")
-            plot_stuff(sintel_utils.custom_color_from_flow(predicted_flow), "predicted flow")
+            plot_stuff(sintel_utils.raw_color_from_flow(predicted_flow), "predicted flow")
             # diff_zero = left_features[10:-10, 10:-10] - right_features[10:-10, 10:-10]
             flow_means = [gt_flow[:,:,0].mean(), gt_flow[:,:,1].mean()]
             diff_flowd = left_features[10-int(flow_means[1]):-10-int(flow_means[1]), 10-int(flow_means[0]):-10-int(flow_means[0])] - right_features[10:-10, 10:-10]

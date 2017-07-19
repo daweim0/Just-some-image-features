@@ -34,6 +34,7 @@ __C.INPUT = 'RGBD'
 __C.NETWORK = 'VGG16'
 __C.LOSS_FUNC = 'not_specified'
 __C.PUPPER_DATASET = False
+__C.NORMALIZE_IMAGES = False
 
 #
 # Training options
@@ -71,7 +72,7 @@ __C.TRAIN.NUM_UNITS = 64
 __C.TRAIN.NUM_CLASSES = 10
 
 # Use horizontally-flipped images during training?
-__C.TRAIN.USE_FLIPPED = True
+__C.TRAIN.USE_FLIPPED = False
 
 # Iterations between snapshots
 __C.TRAIN.SNAPSHOT_ITERS = 10000
@@ -96,6 +97,7 @@ __C.NET_CONF.MATCHING_STAGE_SCALE = 1.0
 __C.NET_CONF.CONV1_SKIP_LINK = False
 __C.NET_CONF.CONV2_SKIP_LINK = False
 __C.NET_CONF.CONV3_SKIP_LINK = False
+__C.NET_CONF.NEGATIVE_RADIUS = 200
 
 
 #

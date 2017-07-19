@@ -84,7 +84,6 @@ def _get_image_blob(roidb, scale_ind):
         im_scale = cfg.TRAIN.SCALES_BASE[scale_ind]
         im_scales.append(im_scale)
 
-
         if not cfg.PUPPER_DATASET:
             # left image
             # if roidb[i]['image_left'] not in preloaded_images:
@@ -94,12 +93,14 @@ def _get_image_blob(roidb, scale_ind):
                 alpha = im_left[:, :, 3]
                 I = np.where(alpha == 0)
                 im[I[0], I[1], :] = 0
-                im_lef = im
-
+                im_left = im
             im_left_orig = im_left.astype(np.float32, copy=True)
-            im_left_orig -= cfg.PIXEL_MEANS
-            im_left_processed = cv2.resize(im_left_orig, None, None, fx=im_scale, fy=im_scale,
-                                           interpolation=cv2.INTER_LINEAR)
+            if cfg.NORMALIZE_IMAGES:
+                im_left_processed = (im_left_orig - im_left_orig.mean()) / im_left_orig.std()
+            else:
+                im_left_orig -= cfg.PIXEL_MEANS
+                im_left_processed = cv2.resize(im_left_orig, None, None, fx=im_scale, fy=im_scale,
+                                                interpolation=cv2.INTER_LINEAR)
 
             #     preloaded_images[roidb[i]['image_left']] = im_left_processed
             # im_left_processed = preloaded_images[roidb[i]['image_left']]
@@ -113,9 +114,12 @@ def _get_image_blob(roidb, scale_ind):
                 im[I[0], I[1], :] = 0
                 im_right = im
             im_right_orig = im_right.astype(np.float32, copy=True)
-            im_right_orig -= cfg.PIXEL_MEANS
-            im_right_processed = cv2.resize(im_right_orig, None, None, fx=im_scale, fy=im_scale,
-                                            interpolation=cv2.INTER_LINEAR)
+            if cfg.NORMALIZE_IMAGES:
+                im_right_processed = (im_right_orig - im_right_orig.mean()) / im_right_orig.std()
+            else:
+                im_right_orig -= cfg.PIXEL_MEANS
+                im_right_processed = cv2.resize(im_right_orig, None, None, fx=im_scale, fy=im_scale,
+                                                interpolation=cv2.INTER_LINEAR)
             #     preloaded_images[roidb[i]['image_right']] = im_right_processed
             # im_right_processed = preloaded_images[roidb[i]['image_right']]
 
@@ -213,17 +217,23 @@ def _vis_minibatch(image_left_blob, image_right_blob, flow_blob):
         fig = plt.figure()
         # show left
         im_left = image_left_blob[i, :, :, :].copy()
-        im_left += cfg.PIXEL_MEANS
-        im_left = im_left[:, :, (2, 1, 0)]
-        im_left = im_left.astype(np.uint8)
+        if cfg.NORMALIZE_IMAGES:
+            im_left = (im_left - im_left.min()) / (im_left.max() - im_left.min())
+        else:
+            im_left += cfg.PIXEL_MEANS
+            im_left = im_left[:, :, (2, 1, 0)]
+            im_left = im_left.astype(np.uint8)
         fig.add_subplot(221)
         plt.imshow(im_left)
 
         # show right
         im_right = image_right_blob[i, :, :, :].copy()
-        im_right += cfg.PIXEL_MEANS
-        im_right = im_right[:, :, (2, 1, 0)]
-        im_right = im_right.astype(np.uint8)
+        if cfg.NORMALIZE_IMAGES:
+            im_right = (im_right - im_right.min()) / (im_right.max() - im_right.min())
+        else:
+            im_right += cfg.PIXEL_MEANS
+            im_right = im_right[:, :, (2, 1, 0)]
+            im_right = im_right.astype(np.uint8)
         fig.add_subplot(222)
         plt.imshow(im_right)
 
