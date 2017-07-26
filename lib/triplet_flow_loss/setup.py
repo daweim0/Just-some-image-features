@@ -4,13 +4,15 @@ from Cython.Build import cythonize
 
 ext_modules = [
     Extension(
-        "slow_flow_calculator_cython",
-        ["slow_flow_calculator_cython.pyx"],
+        "*",
+        ["*.pyx"],
         extra_compile_args=['-fopenmp'],
         extra_link_args=['-fopenmp'],
     )
 ]
 
+extensions = [Extension("*", ["*.pyx"])]
+
 setup(
-    ext_modules = cythonize("slow_flow_calculator_cython.pyx")
+    ext_modules = cythonize(extensions)
 )

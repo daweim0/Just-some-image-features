@@ -14,7 +14,7 @@ class lov(datasets.imdb):
         self._image_set = image_set
         self._lov_path = self._get_default_path() if lov_path is None \
                             else lov_path
-        self._data_path = os.path.join(self._lov_path, 'data')
+        self._data_path = os.path.join(self._lov_path)
 
         self._classes = ('__background__', '002_master_chef_can', '003_cracker_box', '004_sugar_box', '005_tomato_soup_can', '006_mustard_bottle', \
                          '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', '011_banana', '019_pitcher_base', \
@@ -28,7 +28,7 @@ class lov(datasets.imdb):
 
         self._class_weights = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 
-        self._extents = self._load_object_extents()
+        # self._extents = self._load_object_extents()
 
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.png'
@@ -52,7 +52,7 @@ class lov(datasets.imdb):
         Construct an image path from the image's "index" identifier.
         """
 
-        image_path = os.path.join(self._data_path, index + '-color' + self._image_ext)
+        image_path = os.path.join(self._data_path, index.split(" ")[0] + "/" + index.split(' ')[1] + '-color' + self._image_ext)
         assert os.path.exists(image_path), \
                 'Path does not exist: {}'.format(image_path)
         return image_path
@@ -68,7 +68,7 @@ class lov(datasets.imdb):
         """
         Construct an depth path from the image's "index" identifier.
         """
-        depth_path = os.path.join(self._data_path, index + '-depth' + self._image_ext)
+        depth_path = os.path.join(self._data_path, index.split(" ")[0] + "/" + index.split(' ')[1] + '-depth' + self._image_ext)
         assert os.path.exists(depth_path), \
                 'Path does not exist: {}'.format(depth_path)
         return depth_path
@@ -84,7 +84,7 @@ class lov(datasets.imdb):
         """
         Construct an metadata path from the image's "index" identifier.
         """
-        label_path = os.path.join(self._data_path, index + '-label' + self._image_ext)
+        label_path = os.path.join(self._data_path, index.split(" ")[0] + "/" + index.split(' ')[1] + '-label' + self._image_ext)
         assert os.path.exists(label_path), \
                 'Path does not exist: {}'.format(label_path)
         return label_path
@@ -100,7 +100,7 @@ class lov(datasets.imdb):
         """
         Construct an metadata path from the image's "index" identifier.
         """
-        metadata_path = os.path.join(self._data_path, index + '-meta.mat')
+        metadata_path = os.path.join(self._data_path, index.split(" ")[0] + "/" + index.split(' ')[1] + '-meta.mat')
         assert os.path.exists(metadata_path), \
                 'Path does not exist: {}'.format(metadata_path)
         return metadata_path
@@ -198,7 +198,7 @@ class lov(datasets.imdb):
         metadata_path = self.metadata_path_from_index(index)
 
         # parse image name
-        pos = index.find('/')
+        pos = index.find(' ')
         video_id = index[:pos]
         
         return {'image': image_path,

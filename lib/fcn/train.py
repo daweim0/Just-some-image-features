@@ -11,6 +11,7 @@ from fcn.config import cfg
 from gt_data_layer.layer import GtDataLayer
 from gt_single_data_layer.layer import GtSingleDataLayer
 from gt_flow_data_layer.layer import GtFlowDataLayer
+from gt_lov_correspondence_layer.layer import GtLOVFlowDataLayer
 from utils.timer import Timer
 import time
 import numpy as np
@@ -252,7 +253,10 @@ def load_and_enqueue(sess, net, roidb, num_classes, coord):
     assert cfg.TRAIN.OPTICAL_FLOW, "this network can only do optical flow"
 
     # data layer
-    data_layer = GtFlowDataLayer(roidb, num_classes)
+    if cfg.INPUT == "LEFT_RIGHT_CORRESPONDENCE":
+        data_layer = GtLOVFlowDataLayer(roidb, num_classes)
+    else:
+        data_layer = GtFlowDataLayer(roidb, num_classes)
 
     i = 0
     while not coord.should_stop():
@@ -273,8 +277,7 @@ def load_and_enqueue(sess, net, roidb, num_classes, coord):
         flow_blob = blobs['flow']
         occluded_blob = blobs['occluded']
 
-        if cfg.INPUT == 'LEFT_RIGHT_FLOW':
-            feed_dict = {net.data_left: left_blob, net.data_right: right_blob, net.gt_flow: flow_blob,
+        feed_dict = {net.data_left: left_blob, net.data_right: right_blob, net.gt_flow: flow_blob,
                          net.occluded: occluded_blob, net.keep_prob: 0.5}
 
         # print "\t\t\t\t\t\trunning enqueue op " + str(i)

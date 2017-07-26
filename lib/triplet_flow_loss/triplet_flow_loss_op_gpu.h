@@ -16,12 +16,12 @@ namespace tensorflow {
 // the mask array, if it is not nullptr. If mask is passed in as nullptr, the
 // argmax indices are not written.
 bool TripletFlowForwardLaucher(
-    const float* bottom_data, const float* bottom_label, const int* bottom_prediction,
-    const int batch_size, const int height, const int width, const int channels, const int num_classes,
-    const float margin, float* top_data, float* bottom_diff, const Eigen::GpuDevice& d);
+    const float* left_data, const float* right_data, const float* flow_tensor, const int* occluded_tensor,
+    const int batch_size, const int height, const int width, const int channels, const int n_triplets,
+    const float margin, const int negative_radius_, float* top_data, float* bottom_left_diff, float* bottom_right_diff, const Eigen::GpuDevice& d);
 
-bool TripletFlowBackwardLaucher(const float* top_diff, const float* bottom_diff, const int batch_size,
-    const int height, const int width, const int channels, float* output, const Eigen::GpuDevice& d);
+bool TripletFlowBackwardLaucher(const float* top_diff, const float* bottom_left_diff, const float* bottom_right_diff, const int batch_size,
+                            const int height, const int width, const int channels, float* output_l, float* output_r, const Eigen::GpuDevice& d);
 
 }  // namespace tensorflow
 

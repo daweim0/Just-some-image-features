@@ -60,7 +60,7 @@ cdef compute_flow_helper(np.ndarray[np.float32_t, ndim=3] left_features_obj,
 
     cdef int best_x, best_y
 
-    for i in prange(left_len_0, nogil=True, schedule='static', num_threads=23):
+    for i in prange(left_len_0, nogil=True, schedule='static', num_threads=18):
         for j in range(left_len_1):
             best_index_u = i
             best_index_v = j

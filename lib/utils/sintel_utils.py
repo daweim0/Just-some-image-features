@@ -103,8 +103,8 @@ def sintel_compute_color(data_interlaced):
     data_u_in, data_v_in = np.split(data_interlaced, 2, axis=2)
     data_u_in = np.squeeze(data_u_in)
     data_v_in = np.squeeze(data_v_in)
-    # pre-normalize (for some reason?)
-    max_rad = np.max(np.sqrt(np.power(data_u_in, 2) + np.power(data_v_in, 2)))
+    # pre-normalize
+    max_rad = np.max(np.sqrt(np.power(data_u_in, 2) + np.power(data_v_in, 2))) + 1E-10
     fx = data_u_in / max_rad
     fy = data_v_in / max_rad
 

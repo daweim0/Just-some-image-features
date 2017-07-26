@@ -1,5 +1,5 @@
-EXP_DIR: sintel_clean_multi_scale_features
-INPUT: LEFT_RIGHT_FLOW
+EXP_DIR: lov_features_test
+INPUT: LEFT_RIGHT_CORRESPONDENCE
 NETWORK: net_mult_scale_features
 LOSS_FUNC: L2
 PUPPER_DATASET: False
@@ -17,7 +17,7 @@ TRAIN:
   GAMMA: 0.1
   GAN: False
   GRID_SIZE: 256
-  IMS_PER_BATCH: 8
+  IMS_PER_BATCH: 1
   LEARNING_RATE: 0.000001
   LEARNING_RATE_ADAM: 0.000001
   MOMENTUM: 0.9
@@ -26,15 +26,15 @@ TRAIN:
   NUM_UNITS: 64
   OPTICAL_FLOW: True
   OPTIMIZER: ADAM
-  SCALES_BASE: [0.5]
+  SCALES_BASE: [1.0]
   SINGLE_FRAME: True
-  SNAPSHOT_INFIX: sintel_clean
+  SNAPSHOT_INFIX: lov_features
   SNAPSHOT_ITERS: 1000
   SNAPSHOT_PREFIX: vgg16_flow
   STEPSIZE: 15000
   TRAINABLE: True  # only sets if the vgg16 weights are trainable, has no effect on rest of network
   VISUALIZE: False
 TEST:
-  SCALES_BASE: !!python/tuple [0.5]
+  SCALES_BASE: !!python/tuple [1.0]
   OPTICAL_FLOW: True
   VISUALIZE: True
