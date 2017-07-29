@@ -102,8 +102,8 @@ cdef compute_flow_helper(np.ndarray[np.float32_t, ndim=3] left_features_obj,
                 dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)
                 dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)
                 best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1
-                if not (u1 <= best_index_u and u2 >= best_index_u):
-                    printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)
+                # if not (u1 <= best_index_u and u2 >= best_index_u):
+                #     printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)
 
                 v1 = <int> best_index_v - 1
                 if v1 < 0:
@@ -115,8 +115,8 @@ cdef compute_flow_helper(np.ndarray[np.float32_t, ndim=3] left_features_obj,
                 dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)
                 dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)
                 best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1
-                if not (v1 <= best_index_v and v2 >= best_index_v):
-                    printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
+                # if not (v1 <= best_index_v and v2 >= best_index_v):
+                #     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
 
             if best_index_u != -1:
                 flow_arr[i, j, 1] = <float> (best_index_u - i)

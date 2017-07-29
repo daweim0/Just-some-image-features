@@ -250,22 +250,9 @@ class Network(object):
     def triplet_flow_loss(self, input, margin, negative_radius, name):
         output = triplet_flow_loss_op.triplet_flow_loss(self.get_output(input[0]), self.get_output(input[1]),
                                                       self.get_output(input[2]), self.get_output(input[3]),
+                                                        self.get_output(input[4]), self.get_output(input[5]),
                                                         margin, negative_radius, name=name)
         return output
-    
-    
-    def test_triplet_flow_loss(self, session, input_dimensions, left_input, right_input, flow_input, mask_input, margin):
-        x_val = [left_input, right_input, flow_input, mask_input]
-        x = [constant_op.constant(x_val[0], name="x"), constant_op.constant(x_val[1], name="x"),
-             constant_op.constant(x_val[2], name="x"), constant_op.constant(x_val[3], name="x")]
-        y = triplet_flow_loss_op.triplet_flow_loss(left_input, right_input, flow_input, mask_input, margin, name="triplet_flow_loss")
-        x_init = [np.asarray(x_val[0], dtype=np.float32, order="F"), np.asarray(x_val[1], dtype=np.float32, order="F"),
-                  np.asarray(x_val[2], dtype=np.float32, order="F"), np.asarray(x_val[3], dtype=np.float32, order="F")]
-        err = gradient_checker.compute_gradient_error(x, input_dimensions,
-                                                      y, [3], x_init_value=x_init)
-
-        print("elu (float32) gradient err = ", err)
-        #self.assertLess(err, 1e-4)
 
     @layer
     def project(self, input, kernel_size, threshold, name):
@@ -348,6 +335,10 @@ class Network(object):
     @layer
     def cast(self, input, target_dtype, name):
         return tf.cast(input, target_dtype, name=name)
+
+    @layer
+    def round(self, input, name):
+        return tf.round(input, name=name)
 
     @layer
     def lrn(self, input, radius, alpha, beta, name, bias=1.0):

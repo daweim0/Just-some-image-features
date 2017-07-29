@@ -61,6 +61,7 @@ def parse_args():
     return args
 
 if __name__ == '__main__':
+    cfg.MODE = "train"
     args = parse_args()
 
     print('Called with args:')

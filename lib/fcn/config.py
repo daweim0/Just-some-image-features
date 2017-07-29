@@ -36,6 +36,8 @@ __C.LOSS_FUNC = 'not_specified'
 __C.PUPPER_DATASET = False
 __C.NORMALIZE_IMAGES = False
 
+__C.MODE = ""
+
 #
 # Training options
 #
@@ -87,6 +89,8 @@ __C.TRAIN.OPTICAL_FLOW = False
 __C.TRAIN.DELETE_OLD_CHECKPOINTS = False
 __C.TRAIN.VISUALIZE_DURING_TRAIN = False
 __C.TRAIN.OPTIMIZER = 'MomentumOptimizer'
+__C.TRAIN.USE_MASKS = False
+__C.TRAIN.IMAGE_LIST_NAME = ""
 
 
 __C.NET_CONF = edict()

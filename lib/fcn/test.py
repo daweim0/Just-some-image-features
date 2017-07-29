@@ -26,7 +26,7 @@ from normals import gpu_normals
 #from kinect_fusion import kfusion
 from utils import sintel_utils
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import matplotlib.image as mpimg
 import random
@@ -34,6 +34,12 @@ import cv2
 from gt_flow_data_layer.layer import GtFlowDataLayer
 from gt_lov_correspondence_layer.layer import GtLOVFlowDataLayer
 import scipy.ndimage
+# from PySide.QtGui import QClipboard
+try:
+    import pyperclip
+except:
+    print "pyperclip not imported"
+from ast import literal_eval
 
 import triplet_flow_loss.run_slow_flow_calculator_process
 # import pyximport; pyximport.install()
@@ -357,35 +363,42 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         depth_blob = blobs['depth']
         gt_flow = flow_blob[0]
         occluded_blob = blobs['occluded']
+        warped_blob = blobs['warped_im']
+        left_labels_blob = blobs['left_labels']
+        right_labels_blob = blobs['right_labels']
 
         index = roidb_ordering[i]
         images = imdb.roidb[index]
 
-        network_inputs = {net.data_left: left_blob, net.data_right: right_blob,
-                          net.gt_flow: np.zeros(list(right_blob.shape[:3]) + list([2]), dtype=np.float32),
-                          net.occluded: np.zeros(list(right_blob.shape[:3]) + list([1]), dtype=np.int32),
-                          net.keep_prob: 1.0}
-        network_outputs = [net.get_output('gt_flow')]
-        results = siphon_outputs_single_frame(sess, net, network_inputs, network_outputs)
-        flow_arrays = list([results[0][0]])
+        network_inputs = {net.data_left: left_blob, net.data_right: right_blob, net.gt_flow: flow_blob,
+                          net.occluded: occluded_blob, net.labels_left: left_labels_blob,
+                          net.labels_right: right_labels_blob, net.keep_prob: 1.0}
+
+
+        # network_outputs = [net.get_output('gt_flow')]
+        # results = siphon_outputs_single_frame(sess, net, network_inputs, network_outputs)
+        # flow_arrays = list([results[0][0]])
 
         # network_inputs = {net.data_left: left_blob, net.data_right: right_blob,
         #                   net.gt_flow: np.zeros(list(right_blob.shape[:3]) + list([2]), dtype=np.float32),
-        #                   net.occluded: np.zeros(list(right_blob.shape[:3]) + list([1]), dtype=np.int32), net.keep_prob: 1.0}
-        # network_outputs = [net.get_output('features_1x_l'), net.get_output('features_1x_r'), net.get_output('gt_flow'),
-        #                    net.get_output('final_triplet_loss'), net.get_output('occluded'),
-        #                    net.get_output("features_4x_l"), net.get_output("features_16x_l"),
-        #                    net.get_output("features_4x_r"), net.get_output("features_16x_r"),
-        #                    net.get_output("occluded_4x"), net.get_output("occluded_16x"),]
-        # results = siphon_outputs_single_frame(sess, net, network_inputs, network_outputs)
+        #                   net.occluded: np.zeros(list(right_blob.shape[:3]) + list([1]), dtype=np.int32),
+        #                   net.labels_left: np.ones(list(right_blob.shape[:3]) + list([1]), dtype=np.int32),
+        #                   net.labels_right: np.ones(list(right_blob.shape[:3]) + list([1]), dtype=np.int32),
+        #                   net.keep_prob: 1.0}
 
-        # # Pyramidal flow calculation
-        # left_pyramid = (np.squeeze(results[6]), np.squeeze(results[5]), np.squeeze(results[0]))
-        # right_pyramid = (np.squeeze(results[8]), np.squeeze(results[7]), np.squeeze(results[1]))
-        # occluded_pyramid = (np.squeeze(results[10]), np.squeeze(results[9]), np.squeeze(results[4]))
-        # predicted_flow, feature_errors, flow_arrays = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(left_pyramid, right_pyramid,
-        #                                    occluded_pyramid, neighborhood_len_import=100, interpolate_after=True)
-        # # predicted_flow = interpolate_flow(np.squeeze(results[0]), np.squeeze(results[1]), predicted_flow)
+        network_outputs = [net.get_output('features_1x_l'), net.get_output('features_1x_r'), net.get_output('gt_flow'),
+                           net.get_output('final_triplet_loss'), net.get_output('occluded'),
+                           net.get_output("features_4x_l"), net.get_output("features_4x_r"),
+                           net.get_output("occluded_4x")]
+        results = siphon_outputs_single_frame(sess, net, network_inputs, network_outputs)
+
+        # Pyramidal flow calculation
+        left_pyramid = (np.squeeze(results[5]), np.squeeze(results[0]))
+        right_pyramid = (np.squeeze(results[6]), np.squeeze(results[1]))
+        occluded_pyramid = (np.squeeze(results[7]), np.squeeze(results[4]))
+        predicted_flow, feature_errors, flow_arrays = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(left_pyramid, right_pyramid,
+                                           occluded_pyramid, neighborhood_len_import=100, interpolate_after=True)
+        # predicted_flow = interpolate_flow(np.squeeze(results[0]), np.squeeze(results[1]), predicted_flow)
 
 
         # Larger features flow calculation
@@ -405,9 +418,9 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         # # predicted_flow, feature_errors, flow_arrays = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid([np.squeeze(results[0])], [np.squeeze(results[1])],
         # #                                    [np.squeeze(results[4])], neighborhood_len_import=200, interpolate_after=False)
         #
-        # predicted_flow_cropped = predicted_flow[:gt_flow.shape[0], :gt_flow.shape[1]]
-        # average_EPE = sintel_utils.calculate_EPE(gt_flow, predicted_flow_cropped)
-        # zero_prediction_EPE = sintel_utils.calculate_EPE(gt_flow, np.zeros(gt_flow.shape))
+        predicted_flow_cropped = predicted_flow[:gt_flow.shape[0], :gt_flow.shape[1]]
+        average_EPE = sintel_utils.calculate_EPE(gt_flow, predicted_flow_cropped)
+        zero_prediction_EPE = sintel_utils.calculate_EPE(gt_flow, np.zeros(gt_flow.shape))
 
         if calculate_EPE_all_data:
             path_segments = str(images['image_left']).split("/")
@@ -415,14 +428,15 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
             print "\tcalculated triplet loss is %7.4f" % float(results[3][0])
             EPE_list.append(average_EPE)
         else:
+            global iiiiii, x_plots, y_plots, axes_left_list, axes_right_list, fig
             fig = plt.figure()
-            # show left
             iiiiii = 1
-            x_plots = 3
-            y_plots = 2
+            x_plots = 4
+            y_plots = 3
             axes_left_list = list()
             axes_right_list = list()
 
+            # show left
             im_left = fix_rgb_image(left_blob[0])
             ax1 = fig.add_subplot(y_plots, x_plots, iiiiii)
             ax1.imshow(im_left)
@@ -430,14 +444,44 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
             iiiiii += 1
             axes_left_list.append(ax1)
 
-
             # show right
             im_right = fix_rgb_image(right_blob[0])
             ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
             ax2.imshow(im_right)
-            ax2.set_title("right image (red dot is predicted flow, green is ground truth, and blue is the location on the right image)")
+            ax2.set_title("right image (red dot is predicted flow, green is ground truth)")
             iiiiii += 1
             axes_right_list.append(ax2)
+            #
+            # # show right
+            # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+            # ax2.imshow(sintel_utils.sintel_compute_color(gt_flow))
+            # ax2.set_title("flow)")
+            # iiiiii += 1
+            # axes_right_list.append(ax2)
+            #
+            # # show right
+            # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+            # ax2.imshow(sintel_utils.raw_color_from_flow(gt_flow))
+            # ax2.set_title("flow")
+            # iiiiii += 1
+            # axes_left_list.append(ax2)
+
+            # show right
+            ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+            ax2.imshow(((np.squeeze(occluded_blob[0]) * -1 + 1)[:, :, np.newaxis] * im_left).astype(np.uint8))
+            ax2.set_title("occluded")
+            iiiiii += 1
+            axes_left_list.append(ax2)
+
+            # warped
+            ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+            ax2.imshow(fix_rgb_image(np.squeeze(warped_blob[0]).astype(np.uint8)))
+            ax2.set_title("warped left image")
+            iiiiii += 1
+            axes_right_list.append(ax2)
+
+            average_diff = np.mean(warped_blob[0].astype(np.float32) - right_blob[0]) * \
+                           (np.product(right_blob[0].shape) / np.count_nonzero(warped_blob[0]))
 
             # create flow images, but don't display them yet
             gt_flow_color_square = sintel_utils.sintel_compute_color(gt_flow)
@@ -480,137 +524,15 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
             ax2.imshow(np.squeeze(depth_blob[0]))
             ax2.set_title("depth")
             iiiiii += 1
-            axes_right_list.append(ax2)
+            axes_left_list.append(ax2)
 
+            left_labels = (left_labels_blob[0] * np.arange(1, left_labels_blob[0].shape[2] + 1)).sum(axis=2)
+            right_labels = (right_labels_blob[0] * np.arange(1, right_labels_blob[0].shape[2] + 1)).sum(axis=2)
+            display_img(np.squeeze(left_labels), "left labels")
+            display_img(np.squeeze(right_labels), "right labels", right=True)
 
-            # l_features = np.squeeze(results[0])
-            # r_features = np.squeeze(results[1])
-            # # warp left image
-            # # warped = np.zeros([l_features.shape[0] / 4, l_features.shape[1] / 4, l_features.shape[2]])
-            # # # warped = np.copy(image_left)
-            # # # warped = np.copy(image_right)
-            # # for i in range(0, l_features.shape[0], 4):
-            # #     for j in range(0, l_features.shape[1], 4):
-            # #             i_new = i + int(gt_flow[i, j, 1])
-            # #             j_new = j + int(gt_flow[i, j, 0])
-            # #             if 0 <= i_new < warped.shape[0] and 0 <= j_new < warped.shape[1]:
-            # #                 warped[i/4, j/4] = l_features[i_new, j_new] - r_features[i, j]
-            # #
-            # feature_scale_min, feature_scale_max = sintel_utils.colorize_features(l_features, get_scale=True)
-            # # ax4 = fig.add_subplot(334)
-            # # ax4.imshow(sintel_utils.colorize_features(warped, scale_low=feature_scale_min, scale_high=feature_scale_max))
-            # # ax4.set_title("sparse feature difference")
-            #
-            # # show flow differences
-            # gt_components = np.split(gt_flow, 2, axis=2)
-            # pred_components = np.split(predicted_flow_cropped, 2, axis=2)
-            # gt_angle = np.arctan2(gt_components[1], gt_components[0])
-            # pred_angle = np.arctan2(pred_components[1], pred_components[0])
-            # gt_mag = np.sqrt(np.power(gt_components[0], 2)+ np.power(gt_components[1], 2))
-            # pred_mag = np.sqrt(np.power(pred_components[0], 2) + np.power(pred_components[1], 2))
-            #
-            # angle_dif = np.mod((gt_angle - pred_angle) + np.pi, np.pi * 2) - np.pi
-            #
-            # ax5 = fig.add_subplot(y_plots, x_plots, iiiiii)
-            # ax5.imshow(np.abs(angle_dif.squeeze()) / np.pi * (np.abs(gt_mag - pred_mag).squeeze() / np.max(gt_mag)), cmap='Greys')
-            # ax5.set_title("direction difference * magnitude difference")
-            # ax5.set_xlabel("white = no error, black = large error")
-            # iiiiii += 1
-            # axes_left_list.append(ax5)
-            #
-            # ax6 = fig.add_subplot(y_plots, x_plots, iiiiii)
-            # ax6.imshow(np.abs(gt_mag - pred_mag).squeeze() / np.max(gt_mag), cmap='Greys')
-            # ax6.set_title("magnitude difference")
-            # ax6.set_xlabel("white = no error, black = large error")
-            # iiiiii += 1
-            # axes_left_list.append(ax6)
-            #
-            #
-            # similar_r = utils.plotting_tools.feature_similarity(l_features, r_features, gt_flow)
-            # # similar_r = np.zeros(l_features.shape[0:2])
-            # # # warped = np.copy(image_left)
-            # # # warped = np.copy(image_right)
-            # # for i in range(0, similar_r.shape[0]):
-            # #     for j in range(0, similar_r.shape[1]):
-            # #         i_new = i + int(gt_flow[i, j, 1])
-            # #         j_new = j + int(gt_flow[i, j, 0])
-            # #         if 0 <= i_new < similar_r.shape[0]:
-            # #                 if 0 <= j_new < similar_r.shape[1]:
-            # #                     similar_r[i, j] = np.sqrt(np.sum(np.power(l_features[i, j] - r_features[i_new, j_new], 2)))
-            #
-            #
-            # similar_r_pred = utils.plotting_tools.feature_similarity(l_features, r_features, predicted_flow)
-            # # similar_r_pred = np.zeros(l_features.shape[0:2])
-            # # # warped = np.copy(image_left)
-            # # # warped = np.copy(image_right)
-            # # for i in range(0, similar_r_pred.shape[0], 2):
-            # #     for j in range(0, similar_r_pred.shape[1], 2):
-            # #         i_new = i + int(predicted_flow[i, j, 1])
-            # #         j_new = j + int(predicted_flow[i, j, 0])
-            # #         if 0 <= i_new < similar_r_pred.shape[0]:
-            # #                 if 0 <= j_new < similar_r.shape[1]:
-            # #                     similar_r_pred[i, j] = np.sqrt(np.sum(np.power(l_features[i, j] - r_features[i_new, j_new], 2)))
-            # #                     similar_r_pred[i+1, j] = np.sqrt(np.sum(np.power(l_features[i, j] - r_features[i_new, j_new], 2)))
-            # #                     similar_r_pred[i, j+1] = np.sqrt(np.sum(np.power(l_features[i, j] - r_features[i_new, j_new], 2)))
-            # #                     similar_r_pred[i+1, j+1] = np.sqrt(np.sum(np.power(l_features[i, j] - r_features[i_new, j_new], 2)))
-            # # similar_r = np.dstack([similar_r + np.squeeze(occluded_blob[0]), similar_r, similar_r])
-            #
-            # # similar = np.zeros(l_features.shape[0:2])
-            # # # warped = np.copy(image_left)
-            # # # warped = np.copy(image_right)
-            # # box_width = 14
-            # # for i in range(0, similar.shape[0], box_width):
-            # #     for j in range(0, similar.shape[1], box_width):
-            # #         for a in range(box_width / -2 + 1, box_width / 2, 2):
-            # #             if 0 <= i + a < similar.shape[0]:
-            # #                 for b in range(box_width / -2 + 1, box_width / 2, 2):
-            # #                     if 0 <= j + b < similar.shape[1]:
-            # #                         similar[i + a, j + b] = np.sqrt(
-            # #                             np.sum(np.power(l_features[i, j] - l_features[i + a, j + b], 2)))
-            # #                         similar[i+a+1, j+b] = similar[i + a, j + b]
-            # #                         similar[i+a, j+b+1] = similar[i + a, j + b]
-            # #                         similar[i+a+1, j+b+1] = similar[i + a, j + b]
-            # #         similar[i, j] = 1
-            #
-            # # ax5 = fig.add_subplot(y_plots, x_plots, iiiiii)
-            # # ax5.imshow(similar, cmap='Greys')
-            # # ax5.set_title("pixel neighbor similarity")
-            # # ax5.set_xlabel("white = no error, black = large error")
-            # # iiiiii += 1
-            # # axes_left_list.append(ax5)
-            #
-            # ax5_ = fig.add_subplot(y_plots, x_plots, iiiiii)
-            # # ax5_.imshow(np.squeeze(occluded_blob[0]), cmap='Reds')
-            # ax5_.imshow(similar_r_pred, cmap='Greys')
-            # ax5_.set_title("corresponding feature similarity (predicted flow)")
-            # ax5_.set_xlabel("white = no error, black = large error, red means occluded")
-            # iiiiii += 1
-            # axes_left_list.append(ax5_)
-            #
-            # ax5_ = fig.add_subplot(y_plots, x_plots, iiiiii)
-            # # ax5_.imshow(np.squeeze(occluded_blob[0]), cmap='Reds')
-            # ax5_.imshow(similar_r, cmap='Greys')
-            # ax5_.set_title("corresponding feature similarity (gt flow)")
-            # ax5_.set_xlabel("white = no error, black = large error, red means occluded")
-            # iiiiii += 1
-            # axes_left_list.append(ax5_)
-            #
-            #
-            # ax_l_features = fig.add_subplot(y_plots, x_plots, iiiiii)
-            # ax_l_features.imshow(sintel_utils.colorize_features(np.squeeze(results[0]), scale_low=feature_scale_min, scale_high=feature_scale_max))
-            # ax_l_features.set_title("left features")
-            # iiiiii += 1
-            # axes_left_list.append(ax_l_features)
-            #
-            # # ax_r_features = fig.add_subplot(y_plots, x_plots, iiiiii)
-            # # ax_r_features.imshow(sintel_utils.colorize_features(np.squeeze(results[1]), scale_low=feature_scale_min, scale_high=feature_scale_max))
-            # # ax_r_features.set_title("right features")
-            # # iiiiii += 1
-            # # axes_right_list.append(ax_r_features)
-
-            # fig.suptitle('Image ' + str(images['image_left']) + '\naverage endpoint error: ' + str(average_EPE) +
-            #              ' (predicting no movement would result in EPE of ' + str(zero_prediction_EPE) + ')' +
-            #              "\ncalculated triplet loss is %7.4f" % float(results[3][0]), fontsize=10)
+            fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image']) + "\nright image: " +
+                         str(blobs['roidb'][1]['image']) + "\naverage diff: " + str(average_diff))
 
             x_points = list()
             y_points = list()
@@ -623,45 +545,79 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
             green_point = None
             blue_point = None
 
-            # def onclick(event):
-            #     print(
-            #     'button', event.button, 'x=', event.x, 'y=', event.y, 'xdata=', event.xdata, 'ydata=', event.ydata)
-            #     for ax in axes_left_list:
-            #         data_transformer = ax.transData.inverted()
-            #         x_left, y_left = data_transformer.transform([event.x, event.y])
-            #         if -1 <= x_left <= l_features.shape[1] + 3 and -1 <= y_left <= l_features.shape[0] + 3:
-            #             print("\t x transformed:", x_left, "y transformed:", y_left)
-            #             if event.xdata is not None and event.ydata is not None:
-            #                 x_points_right.append(event.xdata + int(predicted_flow[int(event.ydata), int(event.xdata), 0]))
-            #                 y_points_right.append(event.ydata + int(predicted_flow[int(event.ydata), int(event.xdata), 1]))
-            #                 x_points.append(event.xdata)
-            #                 y_points.append(event.ydata)
-            #                 colors.append(random.random())
-            #
-            #                 for sub_ax in axes_left_list:
-            #                     sub_ax.scatter(x_points, y_points, c=colors, s=5, marker='p')
-            #                 for sub_ax in axes_right_list:
-            #                     global red_point, green_point, blue_point
-            #
-            #                     if red_point is not None:
-            #                         blue_point.remove()
-            #                         red_point.remove()
-            #                         green_point.remove()
-            #                     blue_point = sub_ax.scatter([event.xdata], [event.ydata], c='BLUE', s=5, marker='p')
-            #                     red_point = sub_ax.scatter([event.xdata + int(predicted_flow[int(event.ydata), int(event.xdata), 0])],
-            #                                    [event.ydata + int(predicted_flow[int(event.ydata), int(event.xdata), 1])], c='RED', s=5, marker='p')
-            #                     green_point = sub_ax.scatter([event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0])],
-            #                                    [event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1])], c='GREEN', s=5, marker='p')
-            #                 fig.canvas.draw()
-            #             break
-            #
-            # cid = fig.canvas.mpl_connect('button_press_event', onclick)
+            def onclick(event):
+                print(
+                'button', event.button, 'x=', event.x, 'y=', event.y, 'xdata=', event.xdata, 'ydata=', event.ydata)
+                for ax in axes_left_list:
+                    data_transformer = ax.transData.inverted()
+                    x_left, y_left = data_transformer.transform([event.x, event.y])
+                    if -1 <= x_left <= im_left.shape[1] + 3 and -1 <= y_left <= im_left.shape[0] + 3:
+                        print("\t x transformed:", x_left, "y transformed:", y_left)
+                        if event.xdata is not None and event.ydata is not None:
+                            x_points_right.append(event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0]))
+                            y_points_right.append(event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1]))
+                            x_points.append(event.xdata)
+                            y_points.append(event.ydata)
+                            colors.append(random.random())
+
+                            for sub_ax in axes_left_list:
+                                sub_ax.scatter(x_points, y_points, c=colors, s=5, marker='1')
+                            for sub_ax in axes_right_list:
+                                global red_point, green_point, blue_point
+
+                                if blue_point is not None:
+                                    # blue_point.remove()
+                                    red_point.remove()
+                                    green_point.remove()
+                                # blue_point = sub_ax.scatter([event.xdata], [event.ydata], c='BLUE', s=7, marker='p')
+                                red_point = sub_ax.scatter([event.xdata + int(predicted_flow[int(event.ydata), int(event.xdata), 0])],
+                                               [event.ydata + int(predicted_flow[int(event.ydata), int(event.xdata), 1])], c='RED', s=5, marker='1')
+                                green_point = sub_ax.scatter([event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0])],
+                                               [event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1])], c='GREEN', s=4, marker='1')
+                                # green_point = sub_ax.scatter(x_points_right, y_points_right, c=colors, s=4, marker='p')
+                            fig.canvas.draw()
+                        break
+
+            cid = fig.canvas.mpl_connect('button_press_event', onclick)
+            global triplets
+            triplets = None
 
             def handle_key_press(event):
                 if event.key == 'c':
                     plot_flow_images(True)
                 elif event.key == 'r':
                     plot_flow_images(False)
+                elif event.key == "l":
+                    global triplets
+                    string_arr = pyperclip.paste()
+                    tup = literal_eval(string_arr)
+                    triplets = np.array(tup)
+                    triplets = triplets.transpose()
+
+                elif event.key == "t":
+                    global triplets
+
+                    try:
+                        x_a = triplets[0, 0] % 640
+                        y_a = triplets[0, 0] / 640
+                        x_p = triplets[1, 0] % 640
+                        y_p = triplets[1, 0] / 640
+                        x_n = triplets[2, 0] % 640
+                        y_n = triplets[2, 0] / 640
+                        print "x_a", x_a, "y_a", y_a, "x_p", x_p, "y_p", y_p, "x_n", x_n, "y_n", y_n
+                        for sub_ax in axes_left_list:
+                            sub_ax.scatter([x_a], [y_a], c="BLUE", s=6, marker='p')
+                            sub_ax.scatter([x_n], [y_n], c="RED", s=4, marker='p')
+                        for sub_ax in axes_right_list:
+                            sub_ax.scatter([x_p], [y_p], c="GREEN", s=4, marker='p')
+                        fig.canvas.draw()
+
+                        triplets = triplets[:, 1:]
+                        print triplets.shape[1], "points left"
+                    except:
+                        print "data must be loaded with l before it can be plotted"
+
+
                 else:
                     print "key not tied to any action"
                 # only redraw if something changed
@@ -670,7 +626,7 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
             fig.canvas.mpl_connect('key_press_event', handle_key_press)
 
             plt.interactive(False)
-            plt.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.9, wspace=0.1, hspace=0.11)
+            plt.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.9, wspace=0.1, hspace=0.2)
             if save_image:
                 plt.savefig("plot_" + str(training_iter) + "_" + str(i) + ".png")
             else:
@@ -680,6 +636,18 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         average = np.mean(EPE_list)
         print "# average EPE is " + str(average) + " for entire " + str(imdb._name) + " dataset with network " + \
             str(weights_filename)
+
+
+def display_img(img, title, right=False):
+    global iiiiii, x_plots, y_plots, axes_left_list, axes_right_list, fig
+    ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+    ax2.imshow(img)
+    ax2.set_title(title)
+    iiiiii += 1
+    if right:
+        axes_right_list.append(ax2)
+    else:
+        axes_left_list.append(ax2)
 
 
 def fix_rgb_image(image_in):
@@ -736,6 +704,7 @@ def siphon_outputs_single_frame(sess, net, data_feed_dict, outputs):
     while sess.run(net.queue_size_op) != 0:
         training_data_queue.append(sess.run({'left':net.get_output('data_left'), 'right':net.get_output('data_right'),
                                              'flow':net.get_output('gt_flow'), 'keep_prob':net.keep_prob_queue}))
+
 
     sess.run(net.enqueue_op, feed_dict=data_feed_dict)
     output = sess.run(outputs)

@@ -46,6 +46,7 @@ def parse_args():
     return args
 
 if __name__ == '__main__':
+    cfg.MODE = "test"
     args = parse_args()
     print('Called with args:')
     print(args)

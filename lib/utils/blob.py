@@ -10,7 +10,7 @@
 import numpy as np
 import cv2
 
-def im_list_to_blob(ims, num_channels):
+def im_list_to_blob(ims, num_channels, mess_up_single_channel=False):
     """Convert a list of images into a network input.
 
     Assumes images are already prepared (means subtracted, BGR order, ...).
@@ -21,7 +21,7 @@ def im_list_to_blob(ims, num_channels):
                     dtype=np.float32)
     for i in xrange(num_images):
         im = ims[i]
-        if num_channels == 1:
+        if num_channels == 1 and not mess_up_single_channel:
             blob[i, 0:im.shape[0], 0:im.shape[1], :] = im[:,:,np.newaxis]
         else:
             blob[i, 0:im.shape[0], 0:im.shape[1], :] = im

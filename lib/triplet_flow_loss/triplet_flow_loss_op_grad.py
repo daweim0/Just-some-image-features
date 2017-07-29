@@ -15,4 +15,4 @@ def _triplet_flow_grad(op, input_grad, input_grad_left, input_grad_right):
     # compute gradient
     data_left_grad, data_right_grad = triplet_flow_loss_op.triplet_flow_loss_grad(diff_left, diff_right, input_grad, margin)
 
-    return [data_left_grad, data_right_grad, None, None]  # List of one Tensor, since we have three input
+    return [data_left_grad, data_right_grad, None, None, None, None]  # List of one Tensor, since we have three input

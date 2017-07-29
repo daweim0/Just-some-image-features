@@ -7,6 +7,7 @@ import datasets.imdb
 import cPickle
 import numpy as np
 import cv2
+from fcn.config import cfg
 
 class lov(datasets.imdb):
     def __init__(self, image_set, lov_path = None):
@@ -34,6 +35,7 @@ class lov(datasets.imdb):
         self._image_ext = '.png'
         self._image_index = self._load_image_set_index()
         self._roidb_handler = self.gt_roidb
+        self.background_imgs = [os.listdir("data/backgrounds/")]
 
         assert os.path.exists(self._lov_path), \
                 'lov path does not exist: {}'.format(self._lov_path)
@@ -52,7 +54,7 @@ class lov(datasets.imdb):
         Construct an image path from the image's "index" identifier.
         """
 
-        image_path = os.path.join(self._data_path, index.split(" ")[0] + "/" + index.split(' ')[1] + '-color' + self._image_ext)
+        image_path = os.path.join(self._data_path, index.split(' ')[0] + "/" + index.split(' ')[1] + '-color' + self._image_ext)
         assert os.path.exists(image_path), \
                 'Path does not exist: {}'.format(image_path)
         return image_path
@@ -109,7 +111,7 @@ class lov(datasets.imdb):
         """
         Load the indexes listed in this dataset's image set file.
         """
-        image_set_file = os.path.join(self._lov_path, self._image_set + '.txt')
+        image_set_file = os.path.join(self._lov_path, self._image_set + cfg.TRAIN.IMAGE_LIST_NAME + '.txt')
         assert os.path.exists(image_set_file), \
                 'Path does not exist: {}'.format(image_set_file)
 
@@ -161,22 +163,22 @@ class lov(datasets.imdb):
         This function loads/saves from/to a cache file to speed up future calls.
         """
 
-        cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
-        if os.path.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} gt roidb loaded from {}'.format(self.name, cache_file)
-            print 'class weights: ', roidb[0]['class_weights']
-            return roidb
+        # cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        # if os.path.exists(cache_file):
+        #     with open(cache_file, 'rb') as fid:
+        #         roidb = cPickle.load(fid)
+        #     print '{} gt roidb loaded from {}'.format(self.name, cache_file)
+        #     print 'class weights: ', roidb[0]['class_weights']
+        #     return roidb
 
         # self.compute_class_weights()
 
         gt_roidb = [self._load_lov_annotation(index)
                     for index in self.image_index]
 
-        with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote gt roidb to {}'.format(cache_file)
+        # with open(cache_file, 'wb') as fid:
+        #     cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+        # print 'wrote gt roidb to {}'.format(cache_file)
 
         return gt_roidb
 

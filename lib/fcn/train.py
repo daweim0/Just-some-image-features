@@ -265,7 +265,7 @@ def load_and_enqueue(sess, net, roidb, num_classes, coord):
             time.sleep(0.001)
         loader_paused = False
 
-        while sess.run(net.queue_size_op) > 90:
+        while sess.run(net.queue_size_op) > net.queue_size - 1:
             time.sleep(0.01)
 
         # print "\t\t\t\t\t\tstarting load operation " + str(i)
@@ -276,9 +276,12 @@ def load_and_enqueue(sess, net, roidb, num_classes, coord):
         right_blob = blobs['right_image']
         flow_blob = blobs['flow']
         occluded_blob = blobs['occluded']
+        left_labels = blobs['left_labels']
+        right_labels = blobs['right_labels']
 
         feed_dict = {net.data_left: left_blob, net.data_right: right_blob, net.gt_flow: flow_blob,
-                         net.occluded: occluded_blob, net.keep_prob: 0.5}
+                     net.occluded: occluded_blob, net.labels_left: left_labels, net.labels_right: right_labels,
+                     net.keep_prob: 0.5}
 
         # print "\t\t\t\t\t\trunning enqueue op " + str(i)
         try:
@@ -288,7 +291,7 @@ def load_and_enqueue(sess, net, roidb, num_classes, coord):
             print "queue closed, loader thread exiting"
             break
         i += 1
-        if sess.run(net.queue_size_op) >90:
+        if sess.run(net.queue_size_op) >18:
             time.sleep(0.0)  # yeild to training thread
 
 def loss_cross_entropy(scores, labels):

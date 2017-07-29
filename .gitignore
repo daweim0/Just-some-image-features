@@ -4,6 +4,9 @@
 *.tgz
 *.so
 *.o
+*.png
+*.jpg
+*.bmp
 output/*
 lib/icp/icp_main.cpp
 data/LOV/*

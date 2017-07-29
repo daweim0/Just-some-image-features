@@ -61,10 +61,15 @@ class custom_network(Network):
          .div_immediate(tf.constant(2.0, tf.float32), name='gt_flow_16x'))
 
         (self.feed('occluded').cast(tf.float32)
-         .max_pool_int(2, 2, 2, 2, name='occluded_2x').cast(tf.float32)
-         .max_pool_int(2, 2, 2, 2, name='occluded_4x').cast(tf.float32)
-         .max_pool_int(2, 2, 2, 2, name='occluded_8x').cast(tf.float32)
-         .max_pool_int(2, 2, 2, 2, name='occluded_16x'))
+         .avg_pool(2, 2, 2, 2, name='occluded_2x_avg')
+         .avg_pool(2, 2, 2, 2, name='occluded_4x_avg')
+         .avg_pool(2, 2, 2, 2, name='occluded_8x_avg')
+         .avg_pool(2, 2, 2, 2, name='occluded_16x_avg'))
+
+        self.feed('occluded_2x_avg').round().cast(tf.int32, name="occluded_2x")
+        self.feed('occluded_4x_avg').round().cast(tf.int32, name="occluded_4x")
+        self.feed('occluded_8x_avg').round().cast(tf.int32, name="occluded_8x")
+        self.feed('occluded_16x_avg').round().cast(tf.int32, name="occluded_16x")
 
         # left tower
         (self.feed('data_left')

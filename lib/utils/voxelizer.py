@@ -154,7 +154,7 @@ class Voxelizer(object):
         return np.array(X)
 
     # backproject pixels into 3D points in camera's coordinate system
-    def backproject_camera(self, im_depth, meta_data):
+    def backproject_camera(self, im_depth, meta_data, add_nan=True):
 
         depth = im_depth.astype(np.float32, copy=True) / meta_data['factor_depth']
 
@@ -182,8 +182,9 @@ class Voxelizer(object):
         X = np.multiply(np.tile(depth.reshape(1, width*height), (3, 1)), R)
 
         # mask
-        index = np.where(im_depth.flatten() == 0)
-        X[:,index] = np.nan
+        if add_nan:
+            index = np.where(im_depth.flatten() == 0)
+            X[:,index] = np.nan
 
         return np.array(X)
 
