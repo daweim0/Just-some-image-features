@@ -33,6 +33,7 @@ import random
 import cv2
 from gt_flow_data_layer.layer import GtFlowDataLayer
 from gt_lov_correspondence_layer.layer import GtLOVFlowDataLayer
+from gt_lov_synthetic_layer.layer import GtLOVSyntheticLayer
 import scipy.ndimage
 # from PySide.QtGui import QClipboard
 try:
@@ -348,7 +349,9 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
     roidb_ordering = roidb_ordering[0:n_images]
     EPE_list = list()
 
-    if cfg.INPUT == "LEFT_RIGHT_CORRESPONDENCE":
+    if cfg.IMDB_NAME.count("lov_synthetic") != 0:
+        data_layer = GtLOVSyntheticLayer(imdb.roidb, None, single=True)
+    elif cfg.INPUT == "LEFT_RIGHT_CORRESPONDENCE":
         data_layer = GtLOVFlowDataLayer(imdb.roidb, None, single=True)
     else:
         data_layer = GtFlowDataLayer(imdb.roidb, None, single=True)
@@ -397,7 +400,7 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         right_pyramid = (np.squeeze(results[6]), np.squeeze(results[1]))
         occluded_pyramid = (np.squeeze(results[7]), np.squeeze(results[4]))
         predicted_flow, feature_errors, flow_arrays = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(left_pyramid, right_pyramid,
-                                           occluded_pyramid, neighborhood_len_import=100, interpolate_after=True)
+                                           occluded_pyramid, neighborhood_len_import=3, interpolate_after=False)
         # predicted_flow = interpolate_flow(np.squeeze(results[0]), np.squeeze(results[1]), predicted_flow)
 
 
@@ -417,7 +420,7 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         #
         # # predicted_flow, feature_errors, flow_arrays = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid([np.squeeze(results[0])], [np.squeeze(results[1])],
         # #                                    [np.squeeze(results[4])], neighborhood_len_import=200, interpolate_after=False)
-        #
+
         predicted_flow_cropped = predicted_flow[:gt_flow.shape[0], :gt_flow.shape[1]]
         average_EPE = sintel_utils.calculate_EPE(gt_flow, predicted_flow_cropped)
         zero_prediction_EPE = sintel_utils.calculate_EPE(gt_flow, np.zeros(gt_flow.shape))
@@ -554,27 +557,30 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                     if -1 <= x_left <= im_left.shape[1] + 3 and -1 <= y_left <= im_left.shape[0] + 3:
                         print("\t x transformed:", x_left, "y transformed:", y_left)
                         if event.xdata is not None and event.ydata is not None:
-                            x_points_right.append(event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0]))
-                            y_points_right.append(event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1]))
-                            x_points.append(event.xdata)
-                            y_points.append(event.ydata)
-                            colors.append(random.random())
+                            if occluded_blob[0][int(event.ydata), int(event.xdata)] != 1:
+                                x_points_right.append(event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0]))
+                                y_points_right.append(event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1]))
+                                x_points.append(event.xdata)
+                                y_points.append(event.ydata)
+                                colors.append(random.random())
 
-                            for sub_ax in axes_left_list:
-                                sub_ax.scatter(x_points, y_points, c=colors, s=5, marker='1')
-                            for sub_ax in axes_right_list:
-                                global red_point, green_point, blue_point
+                                for sub_ax in axes_left_list:
+                                    sub_ax.scatter(x_points, y_points, c=colors, s=7, marker='1')
+                                for sub_ax in axes_right_list:
+                                    global red_point, green_point, blue_point
 
-                                if blue_point is not None:
-                                    # blue_point.remove()
-                                    red_point.remove()
-                                    green_point.remove()
-                                # blue_point = sub_ax.scatter([event.xdata], [event.ydata], c='BLUE', s=7, marker='p')
-                                red_point = sub_ax.scatter([event.xdata + int(predicted_flow[int(event.ydata), int(event.xdata), 0])],
-                                               [event.ydata + int(predicted_flow[int(event.ydata), int(event.xdata), 1])], c='RED', s=5, marker='1')
-                                green_point = sub_ax.scatter([event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0])],
-                                               [event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1])], c='GREEN', s=4, marker='1')
-                                # green_point = sub_ax.scatter(x_points_right, y_points_right, c=colors, s=4, marker='p')
+                                    if blue_point is not None:
+                                        # blue_point.remove()
+                                        red_point.remove()
+                                        green_point.remove()
+                                    # blue_point = sub_ax.scatter([event.xdata], [event.ydata], c='BLUE', s=7, marker='p')
+                                    red_point = sub_ax.scatter([event.xdata + int(predicted_flow[int(event.ydata), int(event.xdata), 0])],
+                                                   [event.ydata + int(predicted_flow[int(event.ydata), int(event.xdata), 1])], c='RED', s=7, marker='1')
+                                    green_point = sub_ax.scatter([event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0])],
+                                                   [event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1])], c='GREEN', s=6, marker='1')
+                                    # green_point = sub_ax.scatter(x_points_right, y_points_right, c=colors, s=4, marker='p')
+                            else:
+                                print "Point occluded, not drawing"
                             fig.canvas.draw()
                         break
 

@@ -14,17 +14,18 @@ import datasets.shapenet_single
 import datasets.gmu_scene
 import datasets.rgbd_scene
 import datasets.lov
+import datasets.lov_synthetic
 import datasets.linemod_ape
 import datasets.sintel_albedo
 import datasets.sintel_clean
 import numpy as np
 
-# shapenet dataset
-for split in ['train', 'val']:
-    name = 'shapenet_scene_{}'.format(split)
-    print name
-    __sets[name] = (lambda split=split:
-            datasets.shapenet_scene(split))
+# # shapenet dataset
+# for split in ['train', 'val']:
+#     name = 'shapenet_scene_{}'.format(split)
+#     print name
+#     __sets[name] = (lambda split=split:
+#             datasets.shapenet_scene(split))
 
 for split in ['train', 'val']:
     name = 'shapenet_single_{}'.format(split)
@@ -52,6 +53,13 @@ for split in ['train', 'val']:
     print name
     __sets[name] = (lambda split=split:
             datasets.lov(split))
+
+# lov synthetic dataset
+for split in ['train', 'val']:
+    name = 'lov_synthetic_{}'.format(split)
+    print name
+    __sets[name] = (lambda split=split:
+            datasets.lov_synthetic(split))
 
 # linemod dataset
 for split in ['train', 'val']:

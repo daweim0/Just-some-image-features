@@ -326,7 +326,37 @@ public:
                             for (int i = 0; i < MAX_ITERS; i++) {
                                 h = xorshift128() % height;
                                 w = xorshift128() % width;
-                                int index_ = ((n) * height + h) * width + w;
+                                int index_ = ((n) * height + h) * prange(shape_0, nogil=True, schedule='static', num_threads=10):
+            for b in range(shape_1):
+                if occluded_m[a, b] == 1:
+                    flow_depth_m[a, b, 0] = 0.0
+                    flow_depth_m[a, b, 1] = 0.0
+                    continue
+
+                index_1d = a*shape_1+b
+                end_x = <int> x_m[0, index_1d]
+                end_y = <int> y_m[0, index_1d]
+
+                if not ((0 <= end_x < shape_1) and (0 <= end_y < shape_0)):
+                    flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
+                    flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
+                elif (end_point_depths_m[end_y, end_x, 0] < z_m[0, index_1d]) and (end_point_depths_m[end_y, end_x, 0] != 0):
+                    occluded_m[a, b] = 1
+                elif (end_point_depths_m[end_y, end_x, 0] > z_m[0, index_1d]) and (end_point_depths_m[end_y, end_x, 0] != 0):
+                    occluded_m[<int> end_point_depths_m[end_y, end_x, 1], <int> end_point_depths_m[end_y, end_x, 2]] = 1
+                    flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
+                    flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
+                    end_point_depths_m[end_y, end_x, 0] = z_m[0, index_1d]
+                    im_left_warped_m[end_y, end_x, 0] = im_left_processed_m[a, b, 0]
+                    im_left_warped_m[end_y, end_x, 1] = im_left_processed_m[a, b, 1]
+                    im_left_warped_m[end_y, end_x, 2] = im_left_processed_m[a, b, 2]
+                else:
+                    flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
+                    flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
+                    end_point_depths_m[end_y, end_x, 0] = z_m[0, index_1d]
+                    im_left_warped_m[end_y, end_x, 0] = im_left_processed_m[a, b, 0]
+                    im_left_warped_m[end_y, end_x, 1] = im_left_processed_m[a, b, 1]
+                    im_left_warped_m[end_y, end_x, 2] = im_left_processed_m[a, b, width + w;
                                 if ((left_mask_array[(index_) * n_object_masks + current_mask_index] == 0) ||
                                                                                     (occluded_array[index_] != 0)) {
                                     continue;
@@ -403,17 +433,15 @@ public:
             }
         }
 
-//        std::cout << std::endl;
-//
-//
-//        std::cout << "[";
-//        for (int i = 0; i < triplets.size()/3; i++) {
-//            std::cout  << "[" << triplets[i * 3] << ", " << triplets[i * 3 + 1] << ", " << triplets[i*3+2] << "]";
-//            if(i + 1 != triplets.size()/3) {
-//                std::cout << ",";
-//            }
-//        }
-//        std::cout << "]" << std::endl;
+
+        std::cout << "[";
+        for (int i = 0; i < triplets.size()/3; i++) {
+            std::cout  << "[" << triplets[i * 3] << ", " << triplets[i * 3 + 1] << ", " << triplets[i*3+2] << "]";
+            if(i + 1 != triplets.size()/3) {
+                std::cout << ",";
+            }
+        }
+        std::cout << "]" << std::endl;
 
 
         double loss = 0;

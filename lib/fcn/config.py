@@ -36,7 +36,9 @@ __C.LOSS_FUNC = 'not_specified'
 __C.PUPPER_DATASET = False
 __C.NORMALIZE_IMAGES = False
 
+# these are set once the program starts running, they should not be set in a cfg file
 __C.MODE = ""
+__C.IMDB_NAME = ""
 
 #
 # Training options

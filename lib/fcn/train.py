@@ -12,6 +12,7 @@ from gt_data_layer.layer import GtDataLayer
 from gt_single_data_layer.layer import GtSingleDataLayer
 from gt_flow_data_layer.layer import GtFlowDataLayer
 from gt_lov_correspondence_layer.layer import GtLOVFlowDataLayer
+from gt_lov_synthetic_layer.layer import GtLOVSyntheticLayer
 from utils.timer import Timer
 import time
 import numpy as np
@@ -253,7 +254,9 @@ def load_and_enqueue(sess, net, roidb, num_classes, coord):
     assert cfg.TRAIN.OPTICAL_FLOW, "this network can only do optical flow"
 
     # data layer
-    if cfg.INPUT == "LEFT_RIGHT_CORRESPONDENCE":
+    if cfg.IMDB_NAME.count("lov_synthetic") != 0:
+        data_layer = GtLOVSyntheticLayer(roidb, num_classes)
+    elif cfg.INPUT == "LEFT_RIGHT_CORRESPONDENCE":
         data_layer = GtLOVFlowDataLayer(roidb, num_classes)
     else:
         data_layer = GtFlowDataLayer(roidb, num_classes)

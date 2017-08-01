@@ -70,6 +70,7 @@ if __name__ == '__main__':
 
     weights_filename = os.path.splitext(os.path.basename(args.model))[0]
 
+    cfg.IMDB_NAME = args.imdb_name
     imdb = get_imdb(args.imdb_name)
 
     cfg.GPU_ID = args.gpu_id

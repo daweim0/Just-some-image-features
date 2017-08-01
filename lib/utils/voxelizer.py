@@ -166,7 +166,7 @@ class Voxelizer(object):
             Kinv[0, 0] = -1 * Kinv[0, 0]
             Kinv[0, 2] = -1 * Kinv[0, 2]
 
-        # compute the 3D points        
+        # compute the 3D points
         width = depth.shape[1]
         height = depth.shape[0]
 
@@ -187,6 +187,7 @@ class Voxelizer(object):
             X[:,index] = np.nan
 
         return np.array(X)
+
 
     def check_points(self, points, pose):
         # transform the points
