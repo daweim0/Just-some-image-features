@@ -25,7 +25,7 @@ def compute_flow(left_features, right_features, mask, initialization, neighborho
                                neighborhood_len_import, initialization.astype(np.float32), feature_error_arr, interpolate)
 
 
-@cython.boundscheck(False)
+@cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)
 @cython.cdivision(True)
 cdef compute_flow_helper(np.ndarray[np.float32_t, ndim=3] left_features_obj,
@@ -60,85 +60,73 @@ cdef compute_flow_helper(np.ndarray[np.float32_t, ndim=3] left_features_obj,
 
     cdef int best_x, best_y
 
-    for i in prange(1, left_len_0 - 1, 3, nogil=True, schedule='guided', num_threads=20):
-    # for i in range(left_len_0):
-        for j in range(1, left_len_1 - 1, 3):
-            if mask[i, j] != 0:
-                set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
+    for i in prange(left_len_0, nogil=True, schedule='static', num_threads=18):
+        for j in range(left_len_1):
+            best_index_u = i
+            best_index_v = j
+
+            # set the starting distance to no be no movement. Otherwise the default will be large
+            current_dist = 10**5  # just a really big number
+            # if mask[i, j] == 0:
+
+            initial_i = <int> flow_arr[i, j, 1] + i
+            initial_j = <int> flow_arr[i, j, 0] + j
+            current_dist = dist(left_features, right_features, i, j, initial_i, initial_j, feature_depth)
+            best_dist = current_dist
+
+            start_a = max_int(0, initial_i - neighborhood_len/2)
+            stop_a = min_int(left_len_0, initial_i + (neighborhood_len - neighborhood_len/2))
+            start_b = max_int(0, initial_j - neighborhood_len / 2)
+            stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))
+            for a in range(start_a, stop_a):
+                for b in range(start_b, stop_b):
+                    # if mask[a, b] == 0:
+                    current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)
+
+                    if current_dist < best_dist:
+                        best_dist = current_dist
+                        best_index_u = a
+                        best_index_v = b
+            if best_dist > 2.0:
+                best_index_u = -1
+
+
+            if interpolate_after == 1 and best_index_u != -1:
+                u1 = <int> best_index_u - 1
+                if u1 < 0:
+                    u1 = 0
+                if u1 >= right_len_0 - 3:
+                    u1 = right_len_0 - 3
+                u2 = u1 + 2
+
+                dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)
+                dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)
+                best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1
+                if not (u1 <= best_index_u and u2 >= best_index_u):
+                    printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)
+
+                v1 = <int> best_index_v - 1
+                if v1 < 0:
+                    v1 = 0
+                if v1 >= right_len_1 - 3:
+                    v1 = right_len_1 - 3
+                v2 = v1 + 2
+
+                dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)
+                dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)
+                best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1
+                if not (v1 <= best_index_v and v2 >= best_index_v):
+                    printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
+
+            if best_index_u != -1:
+                flow_arr[i, j, 1] = <float> (best_index_u - i)
+                flow_arr[i, j, 0] = <float> (best_index_v - j)
+                feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
             else:
-                best_index_u = i
-                best_index_v = j
-
-                # set the starting distance to no be no movement. Otherwise the default will be large
-                current_dist = 10**5  # just a really big number
-
-                initial_i = <int> flow_arr[i, j, 1] + i
-                initial_j = <int> flow_arr[i, j, 0] + j
-                current_dist = dist(left_features, right_features, i, j, initial_i, initial_j, feature_depth)
-                best_dist = current_dist
-
-                start_a = max_int(0, initial_i - neighborhood_len/2)
-                stop_a = min_int(left_len_0, initial_i + (neighborhood_len - neighborhood_len/2))
-                start_b = max_int(0, initial_j - neighborhood_len / 2)
-                stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))
-                for a in range(start_a, stop_a):
-                    for b in range(start_b, stop_b):
-                        current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)
-
-                        if current_dist < best_dist:
-                            best_dist = current_dist
-                            best_index_u = a
-                            best_index_v = b
-                # if best_dist > 2.0:
-                #     best_index_u = -1
-
-
-                if interpolate_after == 1 and best_index_u != -1:
-                    u1 = <int> best_index_u - 1
-                    if u1 < 0:
-                        u1 = 0
-                    if u1 >= right_len_0 - 3:
-                        u1 = right_len_0 - 3
-                    u2 = u1 + 2
-
-                    dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)
-                    dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)
-                    best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1
-                    # if not (u1 <= best_index_u and u2 >= best_index_u):
-                    #     printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)
-
-                    v1 = <int> best_index_v - 1
-                    if v1 < 0:
-                        v1 = 0
-                    if v1 >= right_len_1 - 3:
-                        v1 = right_len_1 - 3
-                    v2 = v1 + 2
-
-                    dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)
-                    dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)
-                    best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1
-                    # if not (v1 <= best_index_v and v2 >= best_index_v):
-                    #     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
-
-                if best_index_u != -1:
-                    set_flow_at_point(i, j, best_index_v - j, best_index_u - i, flow_arr)
-                    feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
-                else:
-                    set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
+                flow_arr[i, j, 1] = 0.0
+                flow_arr[i, j, 0] = 0.0
 
     return (np.asarray(flow_arr), np.asarray(feature_errors))
-
-
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)
-cdef void set_flow_at_point(int a, int b, float i, float j, float[:,:,:] flow_arr) nogil:
-    cdef int x
-    cdef int y
-
-    for x in range(a - 1, a + 2):
-        for y in range(b - 1, b + 2):
-            flow_arr[x, y, 0] = i
-            flow_arr[x, y, 1] = j
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function

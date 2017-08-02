@@ -55,7 +55,7 @@ for split in ['train', 'val']:
             datasets.lov(split))
 
 # lov synthetic dataset
-for split in ['train', 'val']:
+for split in ['train', 'val', 'test']:
     name = 'lov_synthetic_{}'.format(split)
     print name
     __sets[name] = (lambda split=split:

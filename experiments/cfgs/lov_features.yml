@@ -1,4 +1,4 @@
-EXP_DIR: lov_features_masking_better_momentum
+EXP_DIR: lov_synthetic_features
 INPUT: LEFT_RIGHT_CORRESPONDENCE
 NETWORK: net_labeled_multi_scale_features
 LOSS_FUNC: L2
@@ -7,8 +7,8 @@ NORMALIZE_IMAGES: False
 NET_CONF:
   MATCHING_STAGE_SCALE: 1.0
   CONV3_SKIP_LINK: True
-  CONV2_SKIP_LINK: True
-  CONV1_SKIP_LINK: True
+  CONV2_SKIP_LINK: False
+  CONV1_SKIP_LINK: False
   NEGATIVE_RADIUS: 500
 TRAIN:
   CHROMATIC: False
@@ -25,7 +25,7 @@ TRAIN:
   NUM_STEPS: 5
   NUM_UNITS: 64
   OPTICAL_FLOW: True
-  OPTIMIZER: momentum
+  OPTIMIZER: ADAM
   SCALES_BASE: [1.0]
   SINGLE_FRAME: True
   SNAPSHOT_INFIX: lov_features
@@ -34,7 +34,7 @@ TRAIN:
   STEPSIZE: 7500
   USE_MASKS: True
   TRAINABLE: True  # only sets if the vgg16 weights are trainable, has no effect on rest of network
-  VISUALIZE: True
+  VISUALIZE: False
 #  IMAGE_LIST_NAME: _single
 TEST:
   SCALES_BASE: !!python/tuple [1.0]

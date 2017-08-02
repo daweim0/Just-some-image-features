@@ -395,13 +395,20 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                            net.get_output("occluded_4x")]
         results = siphon_outputs_single_frame(sess, net, network_inputs, network_outputs)
 
-        # Pyramidal flow calculation
-        left_pyramid = (np.squeeze(results[5]), np.squeeze(results[0]))
-        right_pyramid = (np.squeeze(results[6]), np.squeeze(results[1]))
-        occluded_pyramid = (np.squeeze(results[7]), np.squeeze(results[4]))
+        # non-Pyramidal flow calculation
+        left_pyramid = [np.squeeze(results[0])]
+        right_pyramid = [np.squeeze(results[1])]
+        occluded_pyramid = [np.squeeze(results[4])]
         predicted_flow, feature_errors, flow_arrays = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(left_pyramid, right_pyramid,
-                                           occluded_pyramid, neighborhood_len_import=3, interpolate_after=False)
-        # predicted_flow = interpolate_flow(np.squeeze(results[0]), np.squeeze(results[1]), predicted_flow)
+                                           occluded_pyramid, neighborhood_len_import=250, interpolate_after=False)
+
+        # # Pyramidal flow calculation
+        # left_pyramid = (np.squeeze(results[5]), np.squeeze(results[0]))
+        # right_pyramid = (np.squeeze(results[6]), np.squeeze(results[1]))
+        # occluded_pyramid = (np.squeeze(results[7]), np.squeeze(results[4]))
+        # predicted_flow, feature_errors, flow_arrays = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(left_pyramid, right_pyramid,
+        #                                    occluded_pyramid, neighborhood_len_import=300, interpolate_after=True)
+        # # predicted_flow = interpolate_flow(np.squeeze(results[0]), np.squeeze(results[1]), predicted_flow)
 
 
         # Larger features flow calculation
@@ -426,7 +433,7 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         zero_prediction_EPE = sintel_utils.calculate_EPE(gt_flow, np.zeros(gt_flow.shape))
 
         if calculate_EPE_all_data:
-            path_segments = str(images['image_left']).split("/")
+            path_segments = str(images['image']).split("/")
             print ("%3i / %i EPE is %7.4f for " % (i + 1, n_images, average_EPE)) + path_segments[-3] + "/" + path_segments[-2] + "/" + path_segments[-1]
             print "\tcalculated triplet loss is %7.4f" % float(results[3][0])
             EPE_list.append(average_EPE)
@@ -483,7 +490,7 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
             iiiiii += 1
             axes_right_list.append(ax2)
 
-            average_diff = np.mean(warped_blob[0].astype(np.float32) - right_blob[0]) * \
+            average_diff = np.mean(np.abs(warped_blob[0].astype(np.float32) - right_blob[0])) * \
                            (np.product(right_blob[0].shape) / np.count_nonzero(warped_blob[0]))
 
             # create flow images, but don't display them yet
@@ -534,8 +541,15 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
             display_img(np.squeeze(left_labels), "left labels")
             display_img(np.squeeze(right_labels), "right labels", right=True)
 
-            fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image']) + "\nright image: " +
-                         str(blobs['roidb'][1]['image']) + "\naverage diff: " + str(average_diff))
+            display_img(sintel_utils.colorize_features(results[0]), "left features", right=False)
+            display_img(sintel_utils.colorize_features(results[1]), "right features", right=True)
+
+            try:
+                fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image']) + "\nright image: " +
+                         str(blobs['roidb'][1]['image']) + "\naverage diff: " + str(average_diff) + " triplet_loss:" + str(results[3][0]) + " EPE:" + str(average_EPE))
+            except:
+                fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image']) + "\nright image: " +
+                             str(blobs['roidb'][0]['image_right']) + "\naverage diff: " + str(average_diff) + " triplet_loss:" + str(results[3][0]) + " EPE:" + str(average_EPE))
 
             x_points = list()
             y_points = list()
@@ -562,10 +576,17 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                                 y_points_right.append(event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1]))
                                 x_points.append(event.xdata)
                                 y_points.append(event.ydata)
-                                colors.append(random.random())
+                                color = random.random()
+
+                                l_feature = results[0][0, int(event.ydata), int(event.xdata)]
+                                r_feature_gt = results[1][0, int(y_points_right[-1]), int(x_points_right[-1])]
+                                r_feature_pred = results[1][0, int(event.ydata) + int(predicted_flow[int(event.ydata), int(event.xdata), 1]),
+                                                            int(event.xdata) + int(predicted_flow[int(event.ydata), int(event.xdata), 0])]
+                                print "dist between gt l and r features is", np.sqrt(np.sum(np.power(l_feature - r_feature_gt, 2)))
+                                print "dist between predicted l and r features is", np.sqrt(np.sum(np.power(l_feature - r_feature_pred, 2)))
 
                                 for sub_ax in axes_left_list:
-                                    sub_ax.scatter(x_points, y_points, c=colors, s=7, marker='1')
+                                    sub_ax.scatter([event.xdata], [event.ydata], c=[color], s=7, marker='1')
                                 for sub_ax in axes_right_list:
                                     global red_point, green_point, blue_point
 
@@ -575,9 +596,9 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                                         green_point.remove()
                                     # blue_point = sub_ax.scatter([event.xdata], [event.ydata], c='BLUE', s=7, marker='p')
                                     red_point = sub_ax.scatter([event.xdata + int(predicted_flow[int(event.ydata), int(event.xdata), 0])],
-                                                   [event.ydata + int(predicted_flow[int(event.ydata), int(event.xdata), 1])], c='RED', s=7, marker='1')
+                                                   [event.ydata + int(predicted_flow[int(event.ydata), int(event.xdata), 1])], c='RED', edgecolors='WHITE', s=8, marker='o')
                                     green_point = sub_ax.scatter([event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0])],
-                                                   [event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1])], c='GREEN', s=6, marker='1')
+                                                   [event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1])], c='GREEN', s=5, marker='1')
                                     # green_point = sub_ax.scatter(x_points_right, y_points_right, c=colors, s=4, marker='p')
                             else:
                                 print "Point occluded, not drawing"
@@ -593,6 +614,10 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                     plot_flow_images(True)
                 elif event.key == 'r':
                     plot_flow_images(False)
+
+                elif event.key == 'm':
+                    pass
+
                 elif event.key == "l":
                     global triplets
                     string_arr = pyperclip.paste()

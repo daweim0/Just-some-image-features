@@ -13,7 +13,7 @@ import numpy as np
 from utils.voxelizer import Voxelizer
 import random
 
-import pyximport; pyximport.install()
+# import pyximport; pyximport.install()
 from gt_lov_synthetic_layer.minibatch import get_minibatch
 
 
@@ -45,19 +45,7 @@ class GtLOVSyntheticLayer(object):
         db_inds = self._perm[self._cur:self._cur + self._imgs_per_batch]
         self._cur += self._imgs_per_batch
 
-        r_img = db_inds.copy()
-        roidb_len = len(self._roidb)
-        # for i in xrange(len(self._roidb)):
-        for i in xrange(len(db_inds)):
-            # rand = random.randint(0, roidb_len)
-            rand = 50
-            for k in xrange(roidb_len):
-                new_index = (db_inds[i] + rand + k) % roidb_len
-                if self._roidb[db_inds[i]]['video_id'].split(" ")[0] == self._roidb[new_index]['video_id'].split(" ")[0]:
-                    r_img[i] = new_index
-                    break
-
-        db_inds_pairs = np.vstack([db_inds, r_img]).transpose().flatten()
+        db_inds_pairs = db_inds
 
         return db_inds_pairs
 

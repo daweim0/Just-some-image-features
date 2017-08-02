@@ -1,0 +1,2 @@
+catch signal SIGABRT
+run

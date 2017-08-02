@@ -44,7 +44,6 @@ def get_flow_parallel(left_features, right_features, mask, neighborhood_len_impo
     p = subprocess.Popen(['python', 'lib/triplet_flow_loss/run_slow_flow_calculator_process.py', random])
     p.wait()
     # compute_stuff(random)
-    print "subprocess finished"
     flow = np.load("temp/" + random + "flow.npy")
     feature_errors = np.load("temp/" + random + "feature_errors.npy")
     subprocess.call("rm temp/" + random + "*", shell=True)

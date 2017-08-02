@@ -1837,7 +1837,6 @@ static PyObject *indirect_contiguous = 0;
 static int __pyx_memoryview_thread_locks_used;
 static PyThread_type_lock __pyx_memoryview_thread_locks[8];
 static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compute_flow_helper(PyArrayObject *, PyArrayObject *, PyArrayObject *, int, PyArrayObject *, PyArrayObject *, int); /*proto*/
-static void __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_set_flow_at_point(int, int, float, float, __Pyx_memviewslice); /*proto*/
 static CYTHON_INLINE float __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__Pyx_memviewslice, __Pyx_memviewslice, int, int, int, int, int); /*proto*/
 static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_max_int(int, int); /*proto*/
 static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_min_int(int, int); /*proto*/
@@ -2907,7 +2906,7 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
   __Pyx_memviewslice __pyx_v_left_features = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_right_features = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_flow_arr = { 0, 0, { 0 }, { 0 }, { 0 } };
-  __Pyx_memviewslice __pyx_v_mask = { 0, 0, { 0 }, { 0 }, { 0 } };
+  CYTHON_UNUSED __Pyx_memviewslice __pyx_v_mask = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_feature_errors = { 0, 0, { 0 }, { 0 }, { 0 } };
   float __pyx_v_current_dist;
   float __pyx_v_best_dist;
@@ -2940,33 +2939,43 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
   __Pyx_memviewslice __pyx_t_1 = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_t_2 = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_t_3 = { 0, 0, { 0 }, { 0 }, { 0 } };
-  long __pyx_t_4;
-  long __pyx_t_5;
-  long __pyx_t_6;
-  long __pyx_t_7;
+  int __pyx_t_4;
+  int __pyx_t_5;
+  int __pyx_t_6;
+  int __pyx_t_7;
   int __pyx_t_8;
   Py_ssize_t __pyx_t_9;
   Py_ssize_t __pyx_t_10;
-  int __pyx_t_11;
+  Py_ssize_t __pyx_t_11;
   Py_ssize_t __pyx_t_12;
   Py_ssize_t __pyx_t_13;
   Py_ssize_t __pyx_t_14;
-  Py_ssize_t __pyx_t_15;
-  Py_ssize_t __pyx_t_16;
-  Py_ssize_t __pyx_t_17;
+  int __pyx_t_15;
+  int __pyx_t_16;
+  int __pyx_t_17;
   int __pyx_t_18;
   int __pyx_t_19;
   int __pyx_t_20;
-  int __pyx_t_21;
-  int __pyx_t_22;
+  Py_ssize_t __pyx_t_21;
+  Py_ssize_t __pyx_t_22;
   Py_ssize_t __pyx_t_23;
   Py_ssize_t __pyx_t_24;
-  PyObject *__pyx_t_25 = NULL;
-  PyObject *__pyx_t_26 = NULL;
-  PyObject *__pyx_t_27 = NULL;
-  PyObject *__pyx_t_28 = NULL;
-  PyObject *__pyx_t_29 = NULL;
-  PyObject *__pyx_t_30 = NULL;
+  Py_ssize_t __pyx_t_25;
+  Py_ssize_t __pyx_t_26;
+  Py_ssize_t __pyx_t_27;
+  Py_ssize_t __pyx_t_28;
+  Py_ssize_t __pyx_t_29;
+  Py_ssize_t __pyx_t_30;
+  Py_ssize_t __pyx_t_31;
+  Py_ssize_t __pyx_t_32;
+  Py_ssize_t __pyx_t_33;
+  Py_ssize_t __pyx_t_34;
+  PyObject *__pyx_t_35 = NULL;
+  PyObject *__pyx_t_36 = NULL;
+  PyObject *__pyx_t_37 = NULL;
+  PyObject *__pyx_t_38 = NULL;
+  PyObject *__pyx_t_39 = NULL;
+  PyObject *__pyx_t_40 = NULL;
   __Pyx_RefNannySetupContext("compute_flow_helper", 0);
   __pyx_pybuffer_left_features_obj.pybuffer.buf = NULL;
   __pyx_pybuffer_left_features_obj.refcount = 0;
@@ -3136,9 +3145,9 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
   /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":63
  *     cdef int best_x, best_y
  * 
- *     for i in prange(1, left_len_0 - 1, 3, nogil=True, schedule='guided', num_threads=20):             # <<<<<<<<<<<<<<
- *     # for i in range(left_len_0):
- *         for j in range(1, left_len_1 - 1, 3):
+ *     for i in prange(left_len_0, nogil=True, schedule='static', num_threads=18):             # <<<<<<<<<<<<<<
+ *         for j in range(left_len_1):
+ *             best_index_u = i
  */
   {
       #ifdef WITH_THREAD
@@ -3146,8 +3155,8 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
       Py_UNBLOCK_THREADS
       #endif
       /*try:*/ {
-        __pyx_t_4 = (__pyx_v_left_len_0 - 1);
-        if (3 == 0) abort();
+        __pyx_t_4 = __pyx_v_left_len_0;
+        if (1 == 0) abort();
         {
             #if ((defined(__APPLE__) || defined(__OSX__)) && (defined(__GNUC__) && (__GNUC__ > 2 || (__GNUC__ == 2 && (__GNUC_MINOR__ > 95)))))
                 #undef likely
@@ -3155,19 +3164,19 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
                 #define likely(x)   (x)
                 #define unlikely(x) (x)
             #endif
-            __pyx_t_6 = (__pyx_t_4 - 1 + 3 - 3/abs(3)) / 3;
+            __pyx_t_6 = (__pyx_t_4 - 0 + 1 - 1/abs(1)) / 1;
             if (__pyx_t_6 > 0)
             {
                 #ifdef _OPENMP
-                #pragma omp parallel num_threads(20) private(__pyx_t_10, __pyx_t_11, __pyx_t_12, __pyx_t_13, __pyx_t_14, __pyx_t_15, __pyx_t_16, __pyx_t_17, __pyx_t_18, __pyx_t_19, __pyx_t_20, __pyx_t_21, __pyx_t_22, __pyx_t_23, __pyx_t_24, __pyx_t_7, __pyx_t_8, __pyx_t_9)
+                #pragma omp parallel num_threads(18) private(__pyx_t_10, __pyx_t_11, __pyx_t_12, __pyx_t_13, __pyx_t_14, __pyx_t_15, __pyx_t_16, __pyx_t_17, __pyx_t_18, __pyx_t_19, __pyx_t_20, __pyx_t_21, __pyx_t_22, __pyx_t_23, __pyx_t_24, __pyx_t_25, __pyx_t_26, __pyx_t_27, __pyx_t_28, __pyx_t_29, __pyx_t_30, __pyx_t_31, __pyx_t_32, __pyx_t_33, __pyx_t_34, __pyx_t_7, __pyx_t_8, __pyx_t_9)
                 #endif /* _OPENMP */
                 {
                     #ifdef _OPENMP
-                    #pragma omp for lastprivate(__pyx_v_a) lastprivate(__pyx_v_b) lastprivate(__pyx_v_best_dist) lastprivate(__pyx_v_best_index_u) lastprivate(__pyx_v_best_index_v) lastprivate(__pyx_v_current_dist) lastprivate(__pyx_v_dist1) lastprivate(__pyx_v_dist2) firstprivate(__pyx_v_i) lastprivate(__pyx_v_i) lastprivate(__pyx_v_initial_i) lastprivate(__pyx_v_initial_j) lastprivate(__pyx_v_j) lastprivate(__pyx_v_start_a) lastprivate(__pyx_v_start_b) lastprivate(__pyx_v_stop_a) lastprivate(__pyx_v_stop_b) lastprivate(__pyx_v_u1) lastprivate(__pyx_v_u2) lastprivate(__pyx_v_v1) lastprivate(__pyx_v_v2) schedule(guided)
+                    #pragma omp for lastprivate(__pyx_v_a) lastprivate(__pyx_v_b) lastprivate(__pyx_v_best_dist) lastprivate(__pyx_v_best_index_u) lastprivate(__pyx_v_best_index_v) lastprivate(__pyx_v_current_dist) lastprivate(__pyx_v_dist1) lastprivate(__pyx_v_dist2) firstprivate(__pyx_v_i) lastprivate(__pyx_v_i) lastprivate(__pyx_v_initial_i) lastprivate(__pyx_v_initial_j) lastprivate(__pyx_v_j) lastprivate(__pyx_v_start_a) lastprivate(__pyx_v_start_b) lastprivate(__pyx_v_stop_a) lastprivate(__pyx_v_stop_b) lastprivate(__pyx_v_u1) lastprivate(__pyx_v_u2) lastprivate(__pyx_v_v1) lastprivate(__pyx_v_v2) schedule(static)
                     #endif /* _OPENMP */
                     for (__pyx_t_5 = 0; __pyx_t_5 < __pyx_t_6; __pyx_t_5++){
                         {
-                            __pyx_v_i = (int)(1 + 3 * __pyx_t_5);
+                            __pyx_v_i = (int)(0 + 1 * __pyx_t_5);
                             /* Initialize private variables to invalid values */
                             __pyx_v_a = ((int)0xbad0bad0);
                             __pyx_v_b = ((int)0xbad0bad0);
@@ -3189,515 +3198,613 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
                             __pyx_v_v1 = ((int)0xbad0bad0);
                             __pyx_v_v2 = ((int)0xbad0bad0);
 
-                            /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":65
- *     for i in prange(1, left_len_0 - 1, 3, nogil=True, schedule='guided', num_threads=20):
- *     # for i in range(left_len_0):
- *         for j in range(1, left_len_1 - 1, 3):             # <<<<<<<<<<<<<<
- *             if mask[i, j] != 0:
- *                 set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
+                            /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":64
+ * 
+ *     for i in prange(left_len_0, nogil=True, schedule='static', num_threads=18):
+ *         for j in range(left_len_1):             # <<<<<<<<<<<<<<
+ *             best_index_u = i
+ *             best_index_v = j
  */
-                            __pyx_t_7 = (__pyx_v_left_len_1 - 1);
-                            for (__pyx_t_8 = 1; __pyx_t_8 < __pyx_t_7; __pyx_t_8+=3) {
+                            __pyx_t_7 = __pyx_v_left_len_1;
+                            for (__pyx_t_8 = 0; __pyx_t_8 < __pyx_t_7; __pyx_t_8+=1) {
                               __pyx_v_j = __pyx_t_8;
 
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":65
+ *     for i in prange(left_len_0, nogil=True, schedule='static', num_threads=18):
+ *         for j in range(left_len_1):
+ *             best_index_u = i             # <<<<<<<<<<<<<<
+ *             best_index_v = j
+ * 
+ */
+                              __pyx_v_best_index_u = __pyx_v_i;
+
                               /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":66
- *     # for i in range(left_len_0):
- *         for j in range(1, left_len_1 - 1, 3):
- *             if mask[i, j] != 0:             # <<<<<<<<<<<<<<
- *                 set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
- *             else:
+ *         for j in range(left_len_1):
+ *             best_index_u = i
+ *             best_index_v = j             # <<<<<<<<<<<<<<
+ * 
+ *             # set the starting distance to no be no movement. Otherwise the default will be large
+ */
+                              __pyx_v_best_index_v = __pyx_v_j;
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":69
+ * 
+ *             # set the starting distance to no be no movement. Otherwise the default will be large
+ *             current_dist = 10**5  # just a really big number             # <<<<<<<<<<<<<<
+ *             # if mask[i, j] == 0:
+ * 
+ */
+                              __pyx_v_current_dist = 100000.0;
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":72
+ *             # if mask[i, j] == 0:
+ * 
+ *             initial_i = <int> flow_arr[i, j, 1] + i             # <<<<<<<<<<<<<<
+ *             initial_j = <int> flow_arr[i, j, 0] + j
+ *             current_dist = dist(left_features, right_features, i, j, initial_i, initial_j, feature_depth)
  */
                               __pyx_t_9 = __pyx_v_i;
                               __pyx_t_10 = __pyx_v_j;
-                              __pyx_t_11 = (((*((int *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_mask.data + __pyx_t_9 * __pyx_v_mask.strides[0]) ) + __pyx_t_10 * __pyx_v_mask.strides[1]) ))) != 0) != 0);
-                              if (__pyx_t_11) {
+                              __pyx_t_11 = 1;
+                              __pyx_v_initial_i = (((int)(*((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_flow_arr.data + __pyx_t_9 * __pyx_v_flow_arr.strides[0]) ) + __pyx_t_10 * __pyx_v_flow_arr.strides[1]) ) + __pyx_t_11 * __pyx_v_flow_arr.strides[2]) )))) + __pyx_v_i);
 
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":67
- *         for j in range(1, left_len_1 - 1, 3):
- *             if mask[i, j] != 0:
- *                 set_flow_at_point(i, j, 0.0, 0.0, flow_arr)             # <<<<<<<<<<<<<<
- *             else:
- *                 best_index_u = i
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":73
+ * 
+ *             initial_i = <int> flow_arr[i, j, 1] + i
+ *             initial_j = <int> flow_arr[i, j, 0] + j             # <<<<<<<<<<<<<<
+ *             current_dist = dist(left_features, right_features, i, j, initial_i, initial_j, feature_depth)
+ *             best_dist = current_dist
  */
-                                __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_set_flow_at_point(__pyx_v_i, __pyx_v_j, 0.0, 0.0, __pyx_v_flow_arr);
+                              __pyx_t_12 = __pyx_v_i;
+                              __pyx_t_13 = __pyx_v_j;
+                              __pyx_t_14 = 0;
+                              __pyx_v_initial_j = (((int)(*((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_flow_arr.data + __pyx_t_12 * __pyx_v_flow_arr.strides[0]) ) + __pyx_t_13 * __pyx_v_flow_arr.strides[1]) ) + __pyx_t_14 * __pyx_v_flow_arr.strides[2]) )))) + __pyx_v_j);
 
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":66
- *     # for i in range(left_len_0):
- *         for j in range(1, left_len_1 - 1, 3):
- *             if mask[i, j] != 0:             # <<<<<<<<<<<<<<
- *                 set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
- *             else:
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":74
+ *             initial_i = <int> flow_arr[i, j, 1] + i
+ *             initial_j = <int> flow_arr[i, j, 0] + j
+ *             current_dist = dist(left_features, right_features, i, j, initial_i, initial_j, feature_depth)             # <<<<<<<<<<<<<<
+ *             best_dist = current_dist
+ * 
  */
-                                goto __pyx_L12;
+                              __pyx_v_current_dist = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, __pyx_v_initial_i, __pyx_v_initial_j, __pyx_v_feature_depth);
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":75
+ *             initial_j = <int> flow_arr[i, j, 0] + j
+ *             current_dist = dist(left_features, right_features, i, j, initial_i, initial_j, feature_depth)
+ *             best_dist = current_dist             # <<<<<<<<<<<<<<
+ * 
+ *             start_a = max_int(0, initial_i - neighborhood_len/2)
+ */
+                              __pyx_v_best_dist = __pyx_v_current_dist;
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":77
+ *             best_dist = current_dist
+ * 
+ *             start_a = max_int(0, initial_i - neighborhood_len/2)             # <<<<<<<<<<<<<<
+ *             stop_a = min_int(left_len_0, initial_i + (neighborhood_len - neighborhood_len/2))
+ *             start_b = max_int(0, initial_j - neighborhood_len / 2)
+ */
+                              __pyx_v_start_a = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_max_int(0, (__pyx_v_initial_i - (__pyx_v_neighborhood_len / 2)));
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":78
+ * 
+ *             start_a = max_int(0, initial_i - neighborhood_len/2)
+ *             stop_a = min_int(left_len_0, initial_i + (neighborhood_len - neighborhood_len/2))             # <<<<<<<<<<<<<<
+ *             start_b = max_int(0, initial_j - neighborhood_len / 2)
+ *             stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))
+ */
+                              __pyx_v_stop_a = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_min_int(__pyx_v_left_len_0, (__pyx_v_initial_i + (__pyx_v_neighborhood_len - (__pyx_v_neighborhood_len / 2))));
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":79
+ *             start_a = max_int(0, initial_i - neighborhood_len/2)
+ *             stop_a = min_int(left_len_0, initial_i + (neighborhood_len - neighborhood_len/2))
+ *             start_b = max_int(0, initial_j - neighborhood_len / 2)             # <<<<<<<<<<<<<<
+ *             stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))
+ *             for a in range(start_a, stop_a):
+ */
+                              __pyx_v_start_b = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_max_int(0, (__pyx_v_initial_j - (__pyx_v_neighborhood_len / 2)));
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":80
+ *             stop_a = min_int(left_len_0, initial_i + (neighborhood_len - neighborhood_len/2))
+ *             start_b = max_int(0, initial_j - neighborhood_len / 2)
+ *             stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))             # <<<<<<<<<<<<<<
+ *             for a in range(start_a, stop_a):
+ *                 for b in range(start_b, stop_b):
+ */
+                              __pyx_v_stop_b = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_min_int(__pyx_v_left_len_1, (__pyx_v_initial_j + (((int)__pyx_v_neighborhood_len) - (((int)__pyx_v_neighborhood_len) / 2))));
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":81
+ *             start_b = max_int(0, initial_j - neighborhood_len / 2)
+ *             stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))
+ *             for a in range(start_a, stop_a):             # <<<<<<<<<<<<<<
+ *                 for b in range(start_b, stop_b):
+ *                     # if mask[a, b] == 0:
+ */
+                              __pyx_t_15 = __pyx_v_stop_a;
+                              for (__pyx_t_16 = __pyx_v_start_a; __pyx_t_16 < __pyx_t_15; __pyx_t_16+=1) {
+                                __pyx_v_a = __pyx_t_16;
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":82
+ *             stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))
+ *             for a in range(start_a, stop_a):
+ *                 for b in range(start_b, stop_b):             # <<<<<<<<<<<<<<
+ *                     # if mask[a, b] == 0:
+ *                     current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)
+ */
+                                __pyx_t_17 = __pyx_v_stop_b;
+                                for (__pyx_t_18 = __pyx_v_start_b; __pyx_t_18 < __pyx_t_17; __pyx_t_18+=1) {
+                                  __pyx_v_b = __pyx_t_18;
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":84
+ *                 for b in range(start_b, stop_b):
+ *                     # if mask[a, b] == 0:
+ *                     current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)             # <<<<<<<<<<<<<<
+ * 
+ *                     if current_dist < best_dist:
+ */
+                                  __pyx_v_current_dist = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, __pyx_v_a, __pyx_v_b, __pyx_v_feature_depth);
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":86
+ *                     current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)
+ * 
+ *                     if current_dist < best_dist:             # <<<<<<<<<<<<<<
+ *                         best_dist = current_dist
+ *                         best_index_u = a
+ */
+                                  __pyx_t_19 = ((__pyx_v_current_dist < __pyx_v_best_dist) != 0);
+                                  if (__pyx_t_19) {
+
+                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":87
+ * 
+ *                     if current_dist < best_dist:
+ *                         best_dist = current_dist             # <<<<<<<<<<<<<<
+ *                         best_index_u = a
+ *                         best_index_v = b
+ */
+                                    __pyx_v_best_dist = __pyx_v_current_dist;
+
+                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":88
+ *                     if current_dist < best_dist:
+ *                         best_dist = current_dist
+ *                         best_index_u = a             # <<<<<<<<<<<<<<
+ *                         best_index_v = b
+ *             if best_dist > 2.0:
+ */
+                                    __pyx_v_best_index_u = __pyx_v_a;
+
+                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":89
+ *                         best_dist = current_dist
+ *                         best_index_u = a
+ *                         best_index_v = b             # <<<<<<<<<<<<<<
+ *             if best_dist > 2.0:
+ *                 best_index_u = -1
+ */
+                                    __pyx_v_best_index_v = __pyx_v_b;
+
+                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":86
+ *                     current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)
+ * 
+ *                     if current_dist < best_dist:             # <<<<<<<<<<<<<<
+ *                         best_dist = current_dist
+ *                         best_index_u = a
+ */
+                                  }
+                                }
                               }
 
-                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":69
- *                 set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":90
+ *                         best_index_u = a
+ *                         best_index_v = b
+ *             if best_dist > 2.0:             # <<<<<<<<<<<<<<
+ *                 best_index_u = -1
+ * 
+ */
+                              __pyx_t_19 = ((__pyx_v_best_dist > 2.0) != 0);
+                              if (__pyx_t_19) {
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":91
+ *                         best_index_v = b
+ *             if best_dist > 2.0:
+ *                 best_index_u = -1             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+                                __pyx_v_best_index_u = -1.0;
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":90
+ *                         best_index_u = a
+ *                         best_index_v = b
+ *             if best_dist > 2.0:             # <<<<<<<<<<<<<<
+ *                 best_index_u = -1
+ * 
+ */
+                              }
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":94
+ * 
+ * 
+ *             if interpolate_after == 1 and best_index_u != -1:             # <<<<<<<<<<<<<<
+ *                 u1 = <int> best_index_u - 1
+ *                 if u1 < 0:
+ */
+                              __pyx_t_20 = ((__pyx_v_interpolate_after == 1) != 0);
+                              if (__pyx_t_20) {
+                              } else {
+                                __pyx_t_19 = __pyx_t_20;
+                                goto __pyx_L19_bool_binop_done;
+                              }
+                              __pyx_t_20 = ((__pyx_v_best_index_u != -1.0) != 0);
+                              __pyx_t_19 = __pyx_t_20;
+                              __pyx_L19_bool_binop_done:;
+                              if (__pyx_t_19) {
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":95
+ * 
+ *             if interpolate_after == 1 and best_index_u != -1:
+ *                 u1 = <int> best_index_u - 1             # <<<<<<<<<<<<<<
+ *                 if u1 < 0:
+ *                     u1 = 0
+ */
+                                __pyx_v_u1 = (((int)__pyx_v_best_index_u) - 1);
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":96
+ *             if interpolate_after == 1 and best_index_u != -1:
+ *                 u1 = <int> best_index_u - 1
+ *                 if u1 < 0:             # <<<<<<<<<<<<<<
+ *                     u1 = 0
+ *                 if u1 >= right_len_0 - 3:
+ */
+                                __pyx_t_19 = ((__pyx_v_u1 < 0) != 0);
+                                if (__pyx_t_19) {
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":97
+ *                 u1 = <int> best_index_u - 1
+ *                 if u1 < 0:
+ *                     u1 = 0             # <<<<<<<<<<<<<<
+ *                 if u1 >= right_len_0 - 3:
+ *                     u1 = right_len_0 - 3
+ */
+                                  __pyx_v_u1 = 0;
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":96
+ *             if interpolate_after == 1 and best_index_u != -1:
+ *                 u1 = <int> best_index_u - 1
+ *                 if u1 < 0:             # <<<<<<<<<<<<<<
+ *                     u1 = 0
+ *                 if u1 >= right_len_0 - 3:
+ */
+                                }
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":98
+ *                 if u1 < 0:
+ *                     u1 = 0
+ *                 if u1 >= right_len_0 - 3:             # <<<<<<<<<<<<<<
+ *                     u1 = right_len_0 - 3
+ *                 u2 = u1 + 2
+ */
+                                __pyx_t_19 = ((__pyx_v_u1 >= (__pyx_v_right_len_0 - 3)) != 0);
+                                if (__pyx_t_19) {
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":99
+ *                     u1 = 0
+ *                 if u1 >= right_len_0 - 3:
+ *                     u1 = right_len_0 - 3             # <<<<<<<<<<<<<<
+ *                 u2 = u1 + 2
+ * 
+ */
+                                  __pyx_v_u1 = (__pyx_v_right_len_0 - 3);
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":98
+ *                 if u1 < 0:
+ *                     u1 = 0
+ *                 if u1 >= right_len_0 - 3:             # <<<<<<<<<<<<<<
+ *                     u1 = right_len_0 - 3
+ *                 u2 = u1 + 2
+ */
+                                }
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":100
+ *                 if u1 >= right_len_0 - 3:
+ *                     u1 = right_len_0 - 3
+ *                 u2 = u1 + 2             # <<<<<<<<<<<<<<
+ * 
+ *                 dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)
+ */
+                                __pyx_v_u2 = (__pyx_v_u1 + 2);
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":102
+ *                 u2 = u1 + 2
+ * 
+ *                 dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)             # <<<<<<<<<<<<<<
+ *                 dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)
+ *                 best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1
+ */
+                                __pyx_v_dist1 = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, __pyx_v_u1, ((int)__pyx_v_best_index_v), __pyx_v_feature_depth);
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":103
+ * 
+ *                 dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)
+ *                 dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)             # <<<<<<<<<<<<<<
+ *                 best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1
+ *                 if not (u1 <= best_index_u and u2 >= best_index_u):
+ */
+                                __pyx_v_dist2 = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, __pyx_v_u2, ((int)__pyx_v_best_index_v), __pyx_v_feature_depth);
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":104
+ *                 dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)
+ *                 dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)
+ *                 best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1             # <<<<<<<<<<<<<<
+ *                 if not (u1 <= best_index_u and u2 >= best_index_u):
+ *                     printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)
+ */
+                                __pyx_v_best_index_u = (((__pyx_v_dist1 / ((__pyx_v_dist1 + __pyx_v_dist2) + 0.00001)) * __pyx_v_u2) + ((__pyx_v_dist2 / ((__pyx_v_dist1 + __pyx_v_dist2) + 0.00001)) * __pyx_v_u1));
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":105
+ *                 dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)
+ *                 best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1
+ *                 if not (u1 <= best_index_u and u2 >= best_index_u):             # <<<<<<<<<<<<<<
+ *                     printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)
+ * 
+ */
+                                __pyx_t_20 = ((__pyx_v_u1 <= __pyx_v_best_index_u) != 0);
+                                if (__pyx_t_20) {
+                                } else {
+                                  __pyx_t_19 = __pyx_t_20;
+                                  goto __pyx_L24_bool_binop_done;
+                                }
+                                __pyx_t_20 = ((__pyx_v_u2 >= __pyx_v_best_index_u) != 0);
+                                __pyx_t_19 = __pyx_t_20;
+                                __pyx_L24_bool_binop_done:;
+                                __pyx_t_20 = ((!__pyx_t_19) != 0);
+                                if (__pyx_t_20) {
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":106
+ *                 best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1
+ *                 if not (u1 <= best_index_u and u2 >= best_index_u):
+ *                     printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)             # <<<<<<<<<<<<<<
+ * 
+ *                 v1 = <int> best_index_v - 1
+ */
+                                  printf(((char const *)"i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n"), __pyx_v_i, __pyx_v_j, __pyx_v_u1, __pyx_v_u2, __pyx_v_best_index_v, __pyx_v_dist1, __pyx_v_dist2, __pyx_v_best_index_u);
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":105
+ *                 dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)
+ *                 best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1
+ *                 if not (u1 <= best_index_u and u2 >= best_index_u):             # <<<<<<<<<<<<<<
+ *                     printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)
+ * 
+ */
+                                }
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":108
+ *                     printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)
+ * 
+ *                 v1 = <int> best_index_v - 1             # <<<<<<<<<<<<<<
+ *                 if v1 < 0:
+ *                     v1 = 0
+ */
+                                __pyx_v_v1 = (((int)__pyx_v_best_index_v) - 1);
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":109
+ * 
+ *                 v1 = <int> best_index_v - 1
+ *                 if v1 < 0:             # <<<<<<<<<<<<<<
+ *                     v1 = 0
+ *                 if v1 >= right_len_1 - 3:
+ */
+                                __pyx_t_20 = ((__pyx_v_v1 < 0) != 0);
+                                if (__pyx_t_20) {
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":110
+ *                 v1 = <int> best_index_v - 1
+ *                 if v1 < 0:
+ *                     v1 = 0             # <<<<<<<<<<<<<<
+ *                 if v1 >= right_len_1 - 3:
+ *                     v1 = right_len_1 - 3
+ */
+                                  __pyx_v_v1 = 0;
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":109
+ * 
+ *                 v1 = <int> best_index_v - 1
+ *                 if v1 < 0:             # <<<<<<<<<<<<<<
+ *                     v1 = 0
+ *                 if v1 >= right_len_1 - 3:
+ */
+                                }
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":111
+ *                 if v1 < 0:
+ *                     v1 = 0
+ *                 if v1 >= right_len_1 - 3:             # <<<<<<<<<<<<<<
+ *                     v1 = right_len_1 - 3
+ *                 v2 = v1 + 2
+ */
+                                __pyx_t_20 = ((__pyx_v_v1 >= (__pyx_v_right_len_1 - 3)) != 0);
+                                if (__pyx_t_20) {
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":112
+ *                     v1 = 0
+ *                 if v1 >= right_len_1 - 3:
+ *                     v1 = right_len_1 - 3             # <<<<<<<<<<<<<<
+ *                 v2 = v1 + 2
+ * 
+ */
+                                  __pyx_v_v1 = (__pyx_v_right_len_1 - 3);
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":111
+ *                 if v1 < 0:
+ *                     v1 = 0
+ *                 if v1 >= right_len_1 - 3:             # <<<<<<<<<<<<<<
+ *                     v1 = right_len_1 - 3
+ *                 v2 = v1 + 2
+ */
+                                }
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":113
+ *                 if v1 >= right_len_1 - 3:
+ *                     v1 = right_len_1 - 3
+ *                 v2 = v1 + 2             # <<<<<<<<<<<<<<
+ * 
+ *                 dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)
+ */
+                                __pyx_v_v2 = (__pyx_v_v1 + 2);
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":115
+ *                 v2 = v1 + 2
+ * 
+ *                 dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)             # <<<<<<<<<<<<<<
+ *                 dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)
+ *                 best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1
+ */
+                                __pyx_v_dist1 = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, ((int)__pyx_v_best_index_u), __pyx_v_v1, __pyx_v_feature_depth);
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":116
+ * 
+ *                 dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)
+ *                 dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)             # <<<<<<<<<<<<<<
+ *                 best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1
+ *                 if not (v1 <= best_index_v and v2 >= best_index_v):
+ */
+                                __pyx_v_dist2 = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, ((int)__pyx_v_best_index_u), __pyx_v_v2, __pyx_v_feature_depth);
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":117
+ *                 dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)
+ *                 dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)
+ *                 best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1             # <<<<<<<<<<<<<<
+ *                 if not (v1 <= best_index_v and v2 >= best_index_v):
+ *                     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
+ */
+                                __pyx_v_best_index_v = ((((__pyx_v_dist1 + 0.00001) / ((__pyx_v_dist1 + __pyx_v_dist2) + 0.00002)) * __pyx_v_v2) + (((__pyx_v_dist2 + 0.00001) / ((__pyx_v_dist1 + __pyx_v_dist2) + 0.00002)) * __pyx_v_v1));
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":118
+ *                 dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)
+ *                 best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1
+ *                 if not (v1 <= best_index_v and v2 >= best_index_v):             # <<<<<<<<<<<<<<
+ *                     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
+ * 
+ */
+                                __pyx_t_19 = ((__pyx_v_v1 <= __pyx_v_best_index_v) != 0);
+                                if (__pyx_t_19) {
+                                } else {
+                                  __pyx_t_20 = __pyx_t_19;
+                                  goto __pyx_L29_bool_binop_done;
+                                }
+                                __pyx_t_19 = ((__pyx_v_v2 >= __pyx_v_best_index_v) != 0);
+                                __pyx_t_20 = __pyx_t_19;
+                                __pyx_L29_bool_binop_done:;
+                                __pyx_t_19 = ((!__pyx_t_20) != 0);
+                                if (__pyx_t_19) {
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":119
+ *                 best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1
+ *                 if not (v1 <= best_index_v and v2 >= best_index_v):
+ *                     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)             # <<<<<<<<<<<<<<
+ * 
+ *             if best_index_u != -1:
+ */
+                                  printf(((char const *)"i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n"), __pyx_v_i, __pyx_v_j, __pyx_v_v1, __pyx_v_v2, __pyx_v_best_index_u, __pyx_v_dist1, __pyx_v_dist2, __pyx_v_best_index_v);
+
+                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":118
+ *                 dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)
+ *                 best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1
+ *                 if not (v1 <= best_index_v and v2 >= best_index_v):             # <<<<<<<<<<<<<<
+ *                     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
+ * 
+ */
+                                }
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":94
+ * 
+ * 
+ *             if interpolate_after == 1 and best_index_u != -1:             # <<<<<<<<<<<<<<
+ *                 u1 = <int> best_index_u - 1
+ *                 if u1 < 0:
+ */
+                              }
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":121
+ *                     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
+ * 
+ *             if best_index_u != -1:             # <<<<<<<<<<<<<<
+ *                 flow_arr[i, j, 1] = <float> (best_index_u - i)
+ *                 flow_arr[i, j, 0] = <float> (best_index_v - j)
+ */
+                              __pyx_t_19 = ((__pyx_v_best_index_u != -1.0) != 0);
+                              if (__pyx_t_19) {
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":122
+ * 
+ *             if best_index_u != -1:
+ *                 flow_arr[i, j, 1] = <float> (best_index_u - i)             # <<<<<<<<<<<<<<
+ *                 flow_arr[i, j, 0] = <float> (best_index_v - j)
+ *                 feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
+ */
+                                __pyx_t_21 = __pyx_v_i;
+                                __pyx_t_22 = __pyx_v_j;
+                                __pyx_t_23 = 1;
+                                *((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_flow_arr.data + __pyx_t_21 * __pyx_v_flow_arr.strides[0]) ) + __pyx_t_22 * __pyx_v_flow_arr.strides[1]) ) + __pyx_t_23 * __pyx_v_flow_arr.strides[2]) )) = ((float)(__pyx_v_best_index_u - __pyx_v_i));
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":123
+ *             if best_index_u != -1:
+ *                 flow_arr[i, j, 1] = <float> (best_index_u - i)
+ *                 flow_arr[i, j, 0] = <float> (best_index_v - j)             # <<<<<<<<<<<<<<
+ *                 feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
  *             else:
- *                 best_index_u = i             # <<<<<<<<<<<<<<
- *                 best_index_v = j
+ */
+                                __pyx_t_24 = __pyx_v_i;
+                                __pyx_t_25 = __pyx_v_j;
+                                __pyx_t_26 = 0;
+                                *((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_flow_arr.data + __pyx_t_24 * __pyx_v_flow_arr.strides[0]) ) + __pyx_t_25 * __pyx_v_flow_arr.strides[1]) ) + __pyx_t_26 * __pyx_v_flow_arr.strides[2]) )) = ((float)(__pyx_v_best_index_v - __pyx_v_j));
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":124
+ *                 flow_arr[i, j, 1] = <float> (best_index_u - i)
+ *                 flow_arr[i, j, 0] = <float> (best_index_v - j)
+ *                 feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)             # <<<<<<<<<<<<<<
+ *             else:
+ *                 flow_arr[i, j, 1] = 0.0
+ */
+                                __pyx_t_27 = __pyx_v_i;
+                                __pyx_t_28 = __pyx_v_j;
+                                *((float *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_feature_errors.data + __pyx_t_27 * __pyx_v_feature_errors.strides[0]) ) + __pyx_t_28 * __pyx_v_feature_errors.strides[1]) )) = ((float)__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, ((int)__pyx_v_best_index_u), ((int)__pyx_v_best_index_v), __pyx_v_feature_depth));
+
+                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":121
+ *                     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
+ * 
+ *             if best_index_u != -1:             # <<<<<<<<<<<<<<
+ *                 flow_arr[i, j, 1] = <float> (best_index_u - i)
+ *                 flow_arr[i, j, 0] = <float> (best_index_v - j)
+ */
+                                goto __pyx_L31;
+                              }
+
+                              /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":126
+ *                 feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
+ *             else:
+ *                 flow_arr[i, j, 1] = 0.0             # <<<<<<<<<<<<<<
+ *                 flow_arr[i, j, 0] = 0.0
  * 
  */
                               /*else*/ {
-                                __pyx_v_best_index_u = __pyx_v_i;
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":70
- *             else:
- *                 best_index_u = i
- *                 best_index_v = j             # <<<<<<<<<<<<<<
- * 
- *                 # set the starting distance to no be no movement. Otherwise the default will be large
- */
-                                __pyx_v_best_index_v = __pyx_v_j;
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":73
- * 
- *                 # set the starting distance to no be no movement. Otherwise the default will be large
- *                 current_dist = 10**5  # just a really big number             # <<<<<<<<<<<<<<
- * 
- *                 initial_i = <int> flow_arr[i, j, 1] + i
- */
-                                __pyx_v_current_dist = 100000.0;
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":75
- *                 current_dist = 10**5  # just a really big number
- * 
- *                 initial_i = <int> flow_arr[i, j, 1] + i             # <<<<<<<<<<<<<<
- *                 initial_j = <int> flow_arr[i, j, 0] + j
- *                 current_dist = dist(left_features, right_features, i, j, initial_i, initial_j, feature_depth)
- */
-                                __pyx_t_12 = __pyx_v_i;
-                                __pyx_t_13 = __pyx_v_j;
-                                __pyx_t_14 = 1;
-                                __pyx_v_initial_i = (((int)(*((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_flow_arr.data + __pyx_t_12 * __pyx_v_flow_arr.strides[0]) ) + __pyx_t_13 * __pyx_v_flow_arr.strides[1]) ) + __pyx_t_14 * __pyx_v_flow_arr.strides[2]) )))) + __pyx_v_i);
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":76
- * 
- *                 initial_i = <int> flow_arr[i, j, 1] + i
- *                 initial_j = <int> flow_arr[i, j, 0] + j             # <<<<<<<<<<<<<<
- *                 current_dist = dist(left_features, right_features, i, j, initial_i, initial_j, feature_depth)
- *                 best_dist = current_dist
- */
-                                __pyx_t_15 = __pyx_v_i;
-                                __pyx_t_16 = __pyx_v_j;
-                                __pyx_t_17 = 0;
-                                __pyx_v_initial_j = (((int)(*((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_flow_arr.data + __pyx_t_15 * __pyx_v_flow_arr.strides[0]) ) + __pyx_t_16 * __pyx_v_flow_arr.strides[1]) ) + __pyx_t_17 * __pyx_v_flow_arr.strides[2]) )))) + __pyx_v_j);
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":77
- *                 initial_i = <int> flow_arr[i, j, 1] + i
- *                 initial_j = <int> flow_arr[i, j, 0] + j
- *                 current_dist = dist(left_features, right_features, i, j, initial_i, initial_j, feature_depth)             # <<<<<<<<<<<<<<
- *                 best_dist = current_dist
- * 
- */
-                                __pyx_v_current_dist = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, __pyx_v_initial_i, __pyx_v_initial_j, __pyx_v_feature_depth);
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":78
- *                 initial_j = <int> flow_arr[i, j, 0] + j
- *                 current_dist = dist(left_features, right_features, i, j, initial_i, initial_j, feature_depth)
- *                 best_dist = current_dist             # <<<<<<<<<<<<<<
- * 
- *                 start_a = max_int(0, initial_i - neighborhood_len/2)
- */
-                                __pyx_v_best_dist = __pyx_v_current_dist;
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":80
- *                 best_dist = current_dist
- * 
- *                 start_a = max_int(0, initial_i - neighborhood_len/2)             # <<<<<<<<<<<<<<
- *                 stop_a = min_int(left_len_0, initial_i + (neighborhood_len - neighborhood_len/2))
- *                 start_b = max_int(0, initial_j - neighborhood_len / 2)
- */
-                                __pyx_v_start_a = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_max_int(0, (__pyx_v_initial_i - (__pyx_v_neighborhood_len / 2)));
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":81
- * 
- *                 start_a = max_int(0, initial_i - neighborhood_len/2)
- *                 stop_a = min_int(left_len_0, initial_i + (neighborhood_len - neighborhood_len/2))             # <<<<<<<<<<<<<<
- *                 start_b = max_int(0, initial_j - neighborhood_len / 2)
- *                 stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))
- */
-                                __pyx_v_stop_a = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_min_int(__pyx_v_left_len_0, (__pyx_v_initial_i + (__pyx_v_neighborhood_len - (__pyx_v_neighborhood_len / 2))));
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":82
- *                 start_a = max_int(0, initial_i - neighborhood_len/2)
- *                 stop_a = min_int(left_len_0, initial_i + (neighborhood_len - neighborhood_len/2))
- *                 start_b = max_int(0, initial_j - neighborhood_len / 2)             # <<<<<<<<<<<<<<
- *                 stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))
- *                 for a in range(start_a, stop_a):
- */
-                                __pyx_v_start_b = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_max_int(0, (__pyx_v_initial_j - (__pyx_v_neighborhood_len / 2)));
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":83
- *                 stop_a = min_int(left_len_0, initial_i + (neighborhood_len - neighborhood_len/2))
- *                 start_b = max_int(0, initial_j - neighborhood_len / 2)
- *                 stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))             # <<<<<<<<<<<<<<
- *                 for a in range(start_a, stop_a):
- *                     for b in range(start_b, stop_b):
- */
-                                __pyx_v_stop_b = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_min_int(__pyx_v_left_len_1, (__pyx_v_initial_j + (((int)__pyx_v_neighborhood_len) - (((int)__pyx_v_neighborhood_len) / 2))));
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":84
- *                 start_b = max_int(0, initial_j - neighborhood_len / 2)
- *                 stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))
- *                 for a in range(start_a, stop_a):             # <<<<<<<<<<<<<<
- *                     for b in range(start_b, stop_b):
- *                         current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)
- */
-                                __pyx_t_18 = __pyx_v_stop_a;
-                                for (__pyx_t_19 = __pyx_v_start_a; __pyx_t_19 < __pyx_t_18; __pyx_t_19+=1) {
-                                  __pyx_v_a = __pyx_t_19;
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":85
- *                 stop_b = min_int(left_len_1, initial_j + (<int> neighborhood_len - <int> neighborhood_len / 2))
- *                 for a in range(start_a, stop_a):
- *                     for b in range(start_b, stop_b):             # <<<<<<<<<<<<<<
- *                         current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)
- * 
- */
-                                  __pyx_t_20 = __pyx_v_stop_b;
-                                  for (__pyx_t_21 = __pyx_v_start_b; __pyx_t_21 < __pyx_t_20; __pyx_t_21+=1) {
-                                    __pyx_v_b = __pyx_t_21;
-
-                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":86
- *                 for a in range(start_a, stop_a):
- *                     for b in range(start_b, stop_b):
- *                         current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)             # <<<<<<<<<<<<<<
- * 
- *                         if current_dist < best_dist:
- */
-                                    __pyx_v_current_dist = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, __pyx_v_a, __pyx_v_b, __pyx_v_feature_depth);
-
-                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":88
- *                         current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)
- * 
- *                         if current_dist < best_dist:             # <<<<<<<<<<<<<<
- *                             best_dist = current_dist
- *                             best_index_u = a
- */
-                                    __pyx_t_11 = ((__pyx_v_current_dist < __pyx_v_best_dist) != 0);
-                                    if (__pyx_t_11) {
-
-                                      /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":89
- * 
- *                         if current_dist < best_dist:
- *                             best_dist = current_dist             # <<<<<<<<<<<<<<
- *                             best_index_u = a
- *                             best_index_v = b
- */
-                                      __pyx_v_best_dist = __pyx_v_current_dist;
-
-                                      /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":90
- *                         if current_dist < best_dist:
- *                             best_dist = current_dist
- *                             best_index_u = a             # <<<<<<<<<<<<<<
- *                             best_index_v = b
- *                 # if best_dist > 2.0:
- */
-                                      __pyx_v_best_index_u = __pyx_v_a;
-
-                                      /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":91
- *                             best_dist = current_dist
- *                             best_index_u = a
- *                             best_index_v = b             # <<<<<<<<<<<<<<
- *                 # if best_dist > 2.0:
- *                 #     best_index_u = -1
- */
-                                      __pyx_v_best_index_v = __pyx_v_b;
-
-                                      /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":88
- *                         current_dist = dist(left_features, right_features, i, j, a, b, feature_depth)
- * 
- *                         if current_dist < best_dist:             # <<<<<<<<<<<<<<
- *                             best_dist = current_dist
- *                             best_index_u = a
- */
-                                    }
-                                  }
-                                }
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":96
- * 
- * 
- *                 if interpolate_after == 1 and best_index_u != -1:             # <<<<<<<<<<<<<<
- *                     u1 = <int> best_index_u - 1
- *                     if u1 < 0:
- */
-                                __pyx_t_22 = ((__pyx_v_interpolate_after == 1) != 0);
-                                if (__pyx_t_22) {
-                                } else {
-                                  __pyx_t_11 = __pyx_t_22;
-                                  goto __pyx_L19_bool_binop_done;
-                                }
-                                __pyx_t_22 = ((__pyx_v_best_index_u != -1.0) != 0);
-                                __pyx_t_11 = __pyx_t_22;
-                                __pyx_L19_bool_binop_done:;
-                                if (__pyx_t_11) {
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":97
- * 
- *                 if interpolate_after == 1 and best_index_u != -1:
- *                     u1 = <int> best_index_u - 1             # <<<<<<<<<<<<<<
- *                     if u1 < 0:
- *                         u1 = 0
- */
-                                  __pyx_v_u1 = (((int)__pyx_v_best_index_u) - 1);
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":98
- *                 if interpolate_after == 1 and best_index_u != -1:
- *                     u1 = <int> best_index_u - 1
- *                     if u1 < 0:             # <<<<<<<<<<<<<<
- *                         u1 = 0
- *                     if u1 >= right_len_0 - 3:
- */
-                                  __pyx_t_11 = ((__pyx_v_u1 < 0) != 0);
-                                  if (__pyx_t_11) {
-
-                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":99
- *                     u1 = <int> best_index_u - 1
- *                     if u1 < 0:
- *                         u1 = 0             # <<<<<<<<<<<<<<
- *                     if u1 >= right_len_0 - 3:
- *                         u1 = right_len_0 - 3
- */
-                                    __pyx_v_u1 = 0;
-
-                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":98
- *                 if interpolate_after == 1 and best_index_u != -1:
- *                     u1 = <int> best_index_u - 1
- *                     if u1 < 0:             # <<<<<<<<<<<<<<
- *                         u1 = 0
- *                     if u1 >= right_len_0 - 3:
- */
-                                  }
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":100
- *                     if u1 < 0:
- *                         u1 = 0
- *                     if u1 >= right_len_0 - 3:             # <<<<<<<<<<<<<<
- *                         u1 = right_len_0 - 3
- *                     u2 = u1 + 2
- */
-                                  __pyx_t_11 = ((__pyx_v_u1 >= (__pyx_v_right_len_0 - 3)) != 0);
-                                  if (__pyx_t_11) {
-
-                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":101
- *                         u1 = 0
- *                     if u1 >= right_len_0 - 3:
- *                         u1 = right_len_0 - 3             # <<<<<<<<<<<<<<
- *                     u2 = u1 + 2
- * 
- */
-                                    __pyx_v_u1 = (__pyx_v_right_len_0 - 3);
-
-                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":100
- *                     if u1 < 0:
- *                         u1 = 0
- *                     if u1 >= right_len_0 - 3:             # <<<<<<<<<<<<<<
- *                         u1 = right_len_0 - 3
- *                     u2 = u1 + 2
- */
-                                  }
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":102
- *                     if u1 >= right_len_0 - 3:
- *                         u1 = right_len_0 - 3
- *                     u2 = u1 + 2             # <<<<<<<<<<<<<<
- * 
- *                     dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)
- */
-                                  __pyx_v_u2 = (__pyx_v_u1 + 2);
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":104
- *                     u2 = u1 + 2
- * 
- *                     dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)             # <<<<<<<<<<<<<<
- *                     dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)
- *                     best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1
- */
-                                  __pyx_v_dist1 = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, __pyx_v_u1, ((int)__pyx_v_best_index_v), __pyx_v_feature_depth);
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":105
- * 
- *                     dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)
- *                     dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)             # <<<<<<<<<<<<<<
- *                     best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1
- *                     # if not (u1 <= best_index_u and u2 >= best_index_u):
- */
-                                  __pyx_v_dist2 = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, __pyx_v_u2, ((int)__pyx_v_best_index_v), __pyx_v_feature_depth);
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":106
- *                     dist1 = dist(left_features, right_features, i, j, u1, <int> best_index_v, feature_depth)
- *                     dist2 = dist(left_features, right_features, i, j, u2, <int> best_index_v, feature_depth)
- *                     best_index_u = dist1 / (dist1 + dist2 + 0.00001) * u2 + dist2 / (dist1 + dist2 + 0.00001) * u1             # <<<<<<<<<<<<<<
- *                     # if not (u1 <= best_index_u and u2 >= best_index_u):
- *                     #     printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)
- */
-                                  __pyx_v_best_index_u = (((__pyx_v_dist1 / ((__pyx_v_dist1 + __pyx_v_dist2) + 0.00001)) * __pyx_v_u2) + ((__pyx_v_dist2 / ((__pyx_v_dist1 + __pyx_v_dist2) + 0.00001)) * __pyx_v_u1));
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":110
- *                     #     printf("i %3i, j, %3i, u1 %2i, u2 %2i, best_index_v %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_u %3.1lf\n", i, j, u1, u2, best_index_v, dist1, dist2, best_index_u)
- * 
- *                     v1 = <int> best_index_v - 1             # <<<<<<<<<<<<<<
- *                     if v1 < 0:
- *                         v1 = 0
- */
-                                  __pyx_v_v1 = (((int)__pyx_v_best_index_v) - 1);
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":111
- * 
- *                     v1 = <int> best_index_v - 1
- *                     if v1 < 0:             # <<<<<<<<<<<<<<
- *                         v1 = 0
- *                     if v1 >= right_len_1 - 3:
- */
-                                  __pyx_t_11 = ((__pyx_v_v1 < 0) != 0);
-                                  if (__pyx_t_11) {
-
-                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":112
- *                     v1 = <int> best_index_v - 1
- *                     if v1 < 0:
- *                         v1 = 0             # <<<<<<<<<<<<<<
- *                     if v1 >= right_len_1 - 3:
- *                         v1 = right_len_1 - 3
- */
-                                    __pyx_v_v1 = 0;
-
-                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":111
- * 
- *                     v1 = <int> best_index_v - 1
- *                     if v1 < 0:             # <<<<<<<<<<<<<<
- *                         v1 = 0
- *                     if v1 >= right_len_1 - 3:
- */
-                                  }
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":113
- *                     if v1 < 0:
- *                         v1 = 0
- *                     if v1 >= right_len_1 - 3:             # <<<<<<<<<<<<<<
- *                         v1 = right_len_1 - 3
- *                     v2 = v1 + 2
- */
-                                  __pyx_t_11 = ((__pyx_v_v1 >= (__pyx_v_right_len_1 - 3)) != 0);
-                                  if (__pyx_t_11) {
-
-                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":114
- *                         v1 = 0
- *                     if v1 >= right_len_1 - 3:
- *                         v1 = right_len_1 - 3             # <<<<<<<<<<<<<<
- *                     v2 = v1 + 2
- * 
- */
-                                    __pyx_v_v1 = (__pyx_v_right_len_1 - 3);
-
-                                    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":113
- *                     if v1 < 0:
- *                         v1 = 0
- *                     if v1 >= right_len_1 - 3:             # <<<<<<<<<<<<<<
- *                         v1 = right_len_1 - 3
- *                     v2 = v1 + 2
- */
-                                  }
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":115
- *                     if v1 >= right_len_1 - 3:
- *                         v1 = right_len_1 - 3
- *                     v2 = v1 + 2             # <<<<<<<<<<<<<<
- * 
- *                     dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)
- */
-                                  __pyx_v_v2 = (__pyx_v_v1 + 2);
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":117
- *                     v2 = v1 + 2
- * 
- *                     dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)             # <<<<<<<<<<<<<<
- *                     dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)
- *                     best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1
- */
-                                  __pyx_v_dist1 = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, ((int)__pyx_v_best_index_u), __pyx_v_v1, __pyx_v_feature_depth);
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":118
- * 
- *                     dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)
- *                     dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)             # <<<<<<<<<<<<<<
- *                     best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1
- *                     # if not (v1 <= best_index_v and v2 >= best_index_v):
- */
-                                  __pyx_v_dist2 = __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, ((int)__pyx_v_best_index_u), __pyx_v_v2, __pyx_v_feature_depth);
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":119
- *                     dist1 = dist(left_features, right_features, i, j, <int> best_index_u, v1, feature_depth)
- *                     dist2 = dist(left_features, right_features, i, j, <int> best_index_u, v2, feature_depth)
- *                     best_index_v = (dist1 + 0.00001) / (dist1 + dist2 + 0.00002) * v2 + (dist2 + 0.00001) / (dist1 + dist2 + 0.00002) * v1             # <<<<<<<<<<<<<<
- *                     # if not (v1 <= best_index_v and v2 >= best_index_v):
- *                     #     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
- */
-                                  __pyx_v_best_index_v = ((((__pyx_v_dist1 + 0.00001) / ((__pyx_v_dist1 + __pyx_v_dist2) + 0.00002)) * __pyx_v_v2) + (((__pyx_v_dist2 + 0.00001) / ((__pyx_v_dist1 + __pyx_v_dist2) + 0.00002)) * __pyx_v_v1));
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":96
- * 
- * 
- *                 if interpolate_after == 1 and best_index_u != -1:             # <<<<<<<<<<<<<<
- *                     u1 = <int> best_index_u - 1
- *                     if u1 < 0:
- */
-                                }
-
-                                /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":123
- *                     #     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
- * 
- *                 if best_index_u != -1:             # <<<<<<<<<<<<<<
- *                     set_flow_at_point(i, j, best_index_v - j, best_index_u - i, flow_arr)
- *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
- */
-                                __pyx_t_11 = ((__pyx_v_best_index_u != -1.0) != 0);
-                                if (__pyx_t_11) {
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":124
- * 
- *                 if best_index_u != -1:
- *                     set_flow_at_point(i, j, best_index_v - j, best_index_u - i, flow_arr)             # <<<<<<<<<<<<<<
- *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
- *                 else:
- */
-                                  __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_set_flow_at_point(__pyx_v_i, __pyx_v_j, (__pyx_v_best_index_v - __pyx_v_j), (__pyx_v_best_index_u - __pyx_v_i), __pyx_v_flow_arr);
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":125
- *                 if best_index_u != -1:
- *                     set_flow_at_point(i, j, best_index_v - j, best_index_u - i, flow_arr)
- *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)             # <<<<<<<<<<<<<<
- *                 else:
- *                     set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
- */
-                                  __pyx_t_23 = __pyx_v_i;
-                                  __pyx_t_24 = __pyx_v_j;
-                                  *((float *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_feature_errors.data + __pyx_t_23 * __pyx_v_feature_errors.strides[0]) ) + __pyx_t_24 * __pyx_v_feature_errors.strides[1]) )) = ((float)__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, ((int)__pyx_v_best_index_u), ((int)__pyx_v_best_index_v), __pyx_v_feature_depth));
-
-                                  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":123
- *                     #     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
- * 
- *                 if best_index_u != -1:             # <<<<<<<<<<<<<<
- *                     set_flow_at_point(i, j, best_index_v - j, best_index_u - i, flow_arr)
- *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
- */
-                                  goto __pyx_L25;
-                                }
+                                __pyx_t_29 = __pyx_v_i;
+                                __pyx_t_30 = __pyx_v_j;
+                                __pyx_t_31 = 1;
+                                *((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_flow_arr.data + __pyx_t_29 * __pyx_v_flow_arr.strides[0]) ) + __pyx_t_30 * __pyx_v_flow_arr.strides[1]) ) + __pyx_t_31 * __pyx_v_flow_arr.strides[2]) )) = 0.0;
 
                                 /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":127
- *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
- *                 else:
- *                     set_flow_at_point(i, j, 0.0, 0.0, flow_arr)             # <<<<<<<<<<<<<<
+ *             else:
+ *                 flow_arr[i, j, 1] = 0.0
+ *                 flow_arr[i, j, 0] = 0.0             # <<<<<<<<<<<<<<
  * 
  *     return (np.asarray(flow_arr), np.asarray(feature_errors))
  */
-                                /*else*/ {
-                                  __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_set_flow_at_point(__pyx_v_i, __pyx_v_j, 0.0, 0.0, __pyx_v_flow_arr);
-                                }
-                                __pyx_L25:;
+                                __pyx_t_32 = __pyx_v_i;
+                                __pyx_t_33 = __pyx_v_j;
+                                __pyx_t_34 = 0;
+                                *((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_flow_arr.data + __pyx_t_32 * __pyx_v_flow_arr.strides[0]) ) + __pyx_t_33 * __pyx_v_flow_arr.strides[1]) ) + __pyx_t_34 * __pyx_v_flow_arr.strides[2]) )) = 0.0;
                               }
-                              __pyx_L12:;
+                              __pyx_L31:;
                             }
                         }
                     }
@@ -3715,9 +3822,9 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
       /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":63
  *     cdef int best_x, best_y
  * 
- *     for i in prange(1, left_len_0 - 1, 3, nogil=True, schedule='guided', num_threads=20):             # <<<<<<<<<<<<<<
- *     # for i in range(left_len_0):
- *         for j in range(1, left_len_1 - 1, 3):
+ *     for i in prange(left_len_0, nogil=True, schedule='static', num_threads=18):             # <<<<<<<<<<<<<<
+ *         for j in range(left_len_1):
+ *             best_index_u = i
  */
       /*finally:*/ {
         /*normal exit:*/{
@@ -3731,129 +3838,129 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
   }
 
   /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":129
- *                     set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
+ *                 flow_arr[i, j, 0] = 0.0
  * 
  *     return (np.asarray(flow_arr), np.asarray(feature_errors))             # <<<<<<<<<<<<<<
  * 
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_26 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_26)) __PYX_ERR(0, 129, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_26);
-  __pyx_t_27 = __Pyx_PyObject_GetAttrStr(__pyx_t_26, __pyx_n_s_asarray); if (unlikely(!__pyx_t_27)) __PYX_ERR(0, 129, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_27);
-  __Pyx_DECREF(__pyx_t_26); __pyx_t_26 = 0;
-  __pyx_t_26 = __pyx_memoryview_fromslice(__pyx_v_flow_arr, 3, (PyObject *(*)(char *)) __pyx_memview_get_float, (int (*)(char *, PyObject *)) __pyx_memview_set_float, 0);; if (unlikely(!__pyx_t_26)) __PYX_ERR(0, 129, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_26);
-  __pyx_t_28 = NULL;
-  if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_27))) {
-    __pyx_t_28 = PyMethod_GET_SELF(__pyx_t_27);
-    if (likely(__pyx_t_28)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_27);
-      __Pyx_INCREF(__pyx_t_28);
+  __pyx_t_36 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_36)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_36);
+  __pyx_t_37 = __Pyx_PyObject_GetAttrStr(__pyx_t_36, __pyx_n_s_asarray); if (unlikely(!__pyx_t_37)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_37);
+  __Pyx_DECREF(__pyx_t_36); __pyx_t_36 = 0;
+  __pyx_t_36 = __pyx_memoryview_fromslice(__pyx_v_flow_arr, 3, (PyObject *(*)(char *)) __pyx_memview_get_float, (int (*)(char *, PyObject *)) __pyx_memview_set_float, 0);; if (unlikely(!__pyx_t_36)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_36);
+  __pyx_t_38 = NULL;
+  if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_37))) {
+    __pyx_t_38 = PyMethod_GET_SELF(__pyx_t_37);
+    if (likely(__pyx_t_38)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_37);
+      __Pyx_INCREF(__pyx_t_38);
       __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_27, function);
+      __Pyx_DECREF_SET(__pyx_t_37, function);
     }
   }
-  if (!__pyx_t_28) {
-    __pyx_t_25 = __Pyx_PyObject_CallOneArg(__pyx_t_27, __pyx_t_26); if (unlikely(!__pyx_t_25)) __PYX_ERR(0, 129, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_26); __pyx_t_26 = 0;
-    __Pyx_GOTREF(__pyx_t_25);
+  if (!__pyx_t_38) {
+    __pyx_t_35 = __Pyx_PyObject_CallOneArg(__pyx_t_37, __pyx_t_36); if (unlikely(!__pyx_t_35)) __PYX_ERR(0, 129, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_36); __pyx_t_36 = 0;
+    __Pyx_GOTREF(__pyx_t_35);
   } else {
     #if CYTHON_FAST_PYCALL
-    if (PyFunction_Check(__pyx_t_27)) {
-      PyObject *__pyx_temp[2] = {__pyx_t_28, __pyx_t_26};
-      __pyx_t_25 = __Pyx_PyFunction_FastCall(__pyx_t_27, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_25)) __PYX_ERR(0, 129, __pyx_L1_error)
-      __Pyx_XDECREF(__pyx_t_28); __pyx_t_28 = 0;
-      __Pyx_GOTREF(__pyx_t_25);
-      __Pyx_DECREF(__pyx_t_26); __pyx_t_26 = 0;
+    if (PyFunction_Check(__pyx_t_37)) {
+      PyObject *__pyx_temp[2] = {__pyx_t_38, __pyx_t_36};
+      __pyx_t_35 = __Pyx_PyFunction_FastCall(__pyx_t_37, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_35)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __Pyx_XDECREF(__pyx_t_38); __pyx_t_38 = 0;
+      __Pyx_GOTREF(__pyx_t_35);
+      __Pyx_DECREF(__pyx_t_36); __pyx_t_36 = 0;
     } else
     #endif
     #if CYTHON_FAST_PYCCALL
-    if (__Pyx_PyFastCFunction_Check(__pyx_t_27)) {
-      PyObject *__pyx_temp[2] = {__pyx_t_28, __pyx_t_26};
-      __pyx_t_25 = __Pyx_PyCFunction_FastCall(__pyx_t_27, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_25)) __PYX_ERR(0, 129, __pyx_L1_error)
-      __Pyx_XDECREF(__pyx_t_28); __pyx_t_28 = 0;
-      __Pyx_GOTREF(__pyx_t_25);
-      __Pyx_DECREF(__pyx_t_26); __pyx_t_26 = 0;
+    if (__Pyx_PyFastCFunction_Check(__pyx_t_37)) {
+      PyObject *__pyx_temp[2] = {__pyx_t_38, __pyx_t_36};
+      __pyx_t_35 = __Pyx_PyCFunction_FastCall(__pyx_t_37, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_35)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __Pyx_XDECREF(__pyx_t_38); __pyx_t_38 = 0;
+      __Pyx_GOTREF(__pyx_t_35);
+      __Pyx_DECREF(__pyx_t_36); __pyx_t_36 = 0;
     } else
     #endif
     {
-      __pyx_t_29 = PyTuple_New(1+1); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 129, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_29);
-      __Pyx_GIVEREF(__pyx_t_28); PyTuple_SET_ITEM(__pyx_t_29, 0, __pyx_t_28); __pyx_t_28 = NULL;
-      __Pyx_GIVEREF(__pyx_t_26);
-      PyTuple_SET_ITEM(__pyx_t_29, 0+1, __pyx_t_26);
-      __pyx_t_26 = 0;
-      __pyx_t_25 = __Pyx_PyObject_Call(__pyx_t_27, __pyx_t_29, NULL); if (unlikely(!__pyx_t_25)) __PYX_ERR(0, 129, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_25);
-      __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
+      __pyx_t_39 = PyTuple_New(1+1); if (unlikely(!__pyx_t_39)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_39);
+      __Pyx_GIVEREF(__pyx_t_38); PyTuple_SET_ITEM(__pyx_t_39, 0, __pyx_t_38); __pyx_t_38 = NULL;
+      __Pyx_GIVEREF(__pyx_t_36);
+      PyTuple_SET_ITEM(__pyx_t_39, 0+1, __pyx_t_36);
+      __pyx_t_36 = 0;
+      __pyx_t_35 = __Pyx_PyObject_Call(__pyx_t_37, __pyx_t_39, NULL); if (unlikely(!__pyx_t_35)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_35);
+      __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
     }
   }
-  __Pyx_DECREF(__pyx_t_27); __pyx_t_27 = 0;
-  __pyx_t_29 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 129, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_29);
-  __pyx_t_26 = __Pyx_PyObject_GetAttrStr(__pyx_t_29, __pyx_n_s_asarray); if (unlikely(!__pyx_t_26)) __PYX_ERR(0, 129, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_26);
-  __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
-  __pyx_t_29 = __pyx_memoryview_fromslice(__pyx_v_feature_errors, 2, (PyObject *(*)(char *)) __pyx_memview_get_float, (int (*)(char *, PyObject *)) __pyx_memview_set_float, 0);; if (unlikely(!__pyx_t_29)) __PYX_ERR(0, 129, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_29);
-  __pyx_t_28 = NULL;
-  if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_26))) {
-    __pyx_t_28 = PyMethod_GET_SELF(__pyx_t_26);
-    if (likely(__pyx_t_28)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_26);
-      __Pyx_INCREF(__pyx_t_28);
+  __Pyx_DECREF(__pyx_t_37); __pyx_t_37 = 0;
+  __pyx_t_39 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_39)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_39);
+  __pyx_t_36 = __Pyx_PyObject_GetAttrStr(__pyx_t_39, __pyx_n_s_asarray); if (unlikely(!__pyx_t_36)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_36);
+  __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
+  __pyx_t_39 = __pyx_memoryview_fromslice(__pyx_v_feature_errors, 2, (PyObject *(*)(char *)) __pyx_memview_get_float, (int (*)(char *, PyObject *)) __pyx_memview_set_float, 0);; if (unlikely(!__pyx_t_39)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_39);
+  __pyx_t_38 = NULL;
+  if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_36))) {
+    __pyx_t_38 = PyMethod_GET_SELF(__pyx_t_36);
+    if (likely(__pyx_t_38)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_36);
+      __Pyx_INCREF(__pyx_t_38);
       __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_26, function);
+      __Pyx_DECREF_SET(__pyx_t_36, function);
     }
   }
-  if (!__pyx_t_28) {
-    __pyx_t_27 = __Pyx_PyObject_CallOneArg(__pyx_t_26, __pyx_t_29); if (unlikely(!__pyx_t_27)) __PYX_ERR(0, 129, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
-    __Pyx_GOTREF(__pyx_t_27);
+  if (!__pyx_t_38) {
+    __pyx_t_37 = __Pyx_PyObject_CallOneArg(__pyx_t_36, __pyx_t_39); if (unlikely(!__pyx_t_37)) __PYX_ERR(0, 129, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
+    __Pyx_GOTREF(__pyx_t_37);
   } else {
     #if CYTHON_FAST_PYCALL
-    if (PyFunction_Check(__pyx_t_26)) {
-      PyObject *__pyx_temp[2] = {__pyx_t_28, __pyx_t_29};
-      __pyx_t_27 = __Pyx_PyFunction_FastCall(__pyx_t_26, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_27)) __PYX_ERR(0, 129, __pyx_L1_error)
-      __Pyx_XDECREF(__pyx_t_28); __pyx_t_28 = 0;
-      __Pyx_GOTREF(__pyx_t_27);
-      __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
+    if (PyFunction_Check(__pyx_t_36)) {
+      PyObject *__pyx_temp[2] = {__pyx_t_38, __pyx_t_39};
+      __pyx_t_37 = __Pyx_PyFunction_FastCall(__pyx_t_36, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_37)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __Pyx_XDECREF(__pyx_t_38); __pyx_t_38 = 0;
+      __Pyx_GOTREF(__pyx_t_37);
+      __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
     } else
     #endif
     #if CYTHON_FAST_PYCCALL
-    if (__Pyx_PyFastCFunction_Check(__pyx_t_26)) {
-      PyObject *__pyx_temp[2] = {__pyx_t_28, __pyx_t_29};
-      __pyx_t_27 = __Pyx_PyCFunction_FastCall(__pyx_t_26, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_27)) __PYX_ERR(0, 129, __pyx_L1_error)
-      __Pyx_XDECREF(__pyx_t_28); __pyx_t_28 = 0;
-      __Pyx_GOTREF(__pyx_t_27);
-      __Pyx_DECREF(__pyx_t_29); __pyx_t_29 = 0;
+    if (__Pyx_PyFastCFunction_Check(__pyx_t_36)) {
+      PyObject *__pyx_temp[2] = {__pyx_t_38, __pyx_t_39};
+      __pyx_t_37 = __Pyx_PyCFunction_FastCall(__pyx_t_36, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_37)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __Pyx_XDECREF(__pyx_t_38); __pyx_t_38 = 0;
+      __Pyx_GOTREF(__pyx_t_37);
+      __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
     } else
     #endif
     {
-      __pyx_t_30 = PyTuple_New(1+1); if (unlikely(!__pyx_t_30)) __PYX_ERR(0, 129, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_30);
-      __Pyx_GIVEREF(__pyx_t_28); PyTuple_SET_ITEM(__pyx_t_30, 0, __pyx_t_28); __pyx_t_28 = NULL;
-      __Pyx_GIVEREF(__pyx_t_29);
-      PyTuple_SET_ITEM(__pyx_t_30, 0+1, __pyx_t_29);
-      __pyx_t_29 = 0;
-      __pyx_t_27 = __Pyx_PyObject_Call(__pyx_t_26, __pyx_t_30, NULL); if (unlikely(!__pyx_t_27)) __PYX_ERR(0, 129, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_27);
-      __Pyx_DECREF(__pyx_t_30); __pyx_t_30 = 0;
+      __pyx_t_40 = PyTuple_New(1+1); if (unlikely(!__pyx_t_40)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_40);
+      __Pyx_GIVEREF(__pyx_t_38); PyTuple_SET_ITEM(__pyx_t_40, 0, __pyx_t_38); __pyx_t_38 = NULL;
+      __Pyx_GIVEREF(__pyx_t_39);
+      PyTuple_SET_ITEM(__pyx_t_40, 0+1, __pyx_t_39);
+      __pyx_t_39 = 0;
+      __pyx_t_37 = __Pyx_PyObject_Call(__pyx_t_36, __pyx_t_40, NULL); if (unlikely(!__pyx_t_37)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_37);
+      __Pyx_DECREF(__pyx_t_40); __pyx_t_40 = 0;
     }
   }
-  __Pyx_DECREF(__pyx_t_26); __pyx_t_26 = 0;
-  __pyx_t_26 = PyTuple_New(2); if (unlikely(!__pyx_t_26)) __PYX_ERR(0, 129, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_26);
-  __Pyx_GIVEREF(__pyx_t_25);
-  PyTuple_SET_ITEM(__pyx_t_26, 0, __pyx_t_25);
-  __Pyx_GIVEREF(__pyx_t_27);
-  PyTuple_SET_ITEM(__pyx_t_26, 1, __pyx_t_27);
-  __pyx_t_25 = 0;
-  __pyx_t_27 = 0;
-  __pyx_r = __pyx_t_26;
-  __pyx_t_26 = 0;
+  __Pyx_DECREF(__pyx_t_36); __pyx_t_36 = 0;
+  __pyx_t_36 = PyTuple_New(2); if (unlikely(!__pyx_t_36)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_36);
+  __Pyx_GIVEREF(__pyx_t_35);
+  PyTuple_SET_ITEM(__pyx_t_36, 0, __pyx_t_35);
+  __Pyx_GIVEREF(__pyx_t_37);
+  PyTuple_SET_ITEM(__pyx_t_36, 1, __pyx_t_37);
+  __pyx_t_35 = 0;
+  __pyx_t_37 = 0;
+  __pyx_r = __pyx_t_36;
+  __pyx_t_36 = 0;
   goto __pyx_L0;
 
   /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":31
@@ -3869,12 +3976,12 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
   __PYX_XDEC_MEMVIEW(&__pyx_t_1, 1);
   __PYX_XDEC_MEMVIEW(&__pyx_t_2, 1);
   __PYX_XDEC_MEMVIEW(&__pyx_t_3, 1);
-  __Pyx_XDECREF(__pyx_t_25);
-  __Pyx_XDECREF(__pyx_t_26);
-  __Pyx_XDECREF(__pyx_t_27);
-  __Pyx_XDECREF(__pyx_t_28);
-  __Pyx_XDECREF(__pyx_t_29);
-  __Pyx_XDECREF(__pyx_t_30);
+  __Pyx_XDECREF(__pyx_t_35);
+  __Pyx_XDECREF(__pyx_t_36);
+  __Pyx_XDECREF(__pyx_t_37);
+  __Pyx_XDECREF(__pyx_t_38);
+  __Pyx_XDECREF(__pyx_t_39);
+  __Pyx_XDECREF(__pyx_t_40);
   { PyObject *__pyx_type, *__pyx_value, *__pyx_tb;
     __Pyx_PyThreadState_declare
     __Pyx_PyThreadState_assign
@@ -3908,87 +4015,6 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
 /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":134
  * @cython.boundscheck(False) # turn off bounds-checking for entire function
  * @cython.wraparound(False)
- * cdef void set_flow_at_point(int a, int b, float i, float j, float[:,:,:] flow_arr) nogil:             # <<<<<<<<<<<<<<
- *     cdef int x
- *     cdef int y
- */
-
-static void __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_set_flow_at_point(int __pyx_v_a, int __pyx_v_b, float __pyx_v_i, float __pyx_v_j, __Pyx_memviewslice __pyx_v_flow_arr) {
-  int __pyx_v_x;
-  int __pyx_v_y;
-  long __pyx_t_1;
-  int __pyx_t_2;
-  long __pyx_t_3;
-  int __pyx_t_4;
-  Py_ssize_t __pyx_t_5;
-  Py_ssize_t __pyx_t_6;
-  Py_ssize_t __pyx_t_7;
-  Py_ssize_t __pyx_t_8;
-  Py_ssize_t __pyx_t_9;
-  Py_ssize_t __pyx_t_10;
-
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":138
- *     cdef int y
- * 
- *     for x in range(a - 1, a + 2):             # <<<<<<<<<<<<<<
- *         for y in range(b - 1, b + 2):
- *             flow_arr[x, y, 0] = i
- */
-  __pyx_t_1 = (__pyx_v_a + 2);
-  for (__pyx_t_2 = (__pyx_v_a - 1); __pyx_t_2 < __pyx_t_1; __pyx_t_2+=1) {
-    __pyx_v_x = __pyx_t_2;
-
-    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":139
- * 
- *     for x in range(a - 1, a + 2):
- *         for y in range(b - 1, b + 2):             # <<<<<<<<<<<<<<
- *             flow_arr[x, y, 0] = i
- *             flow_arr[x, y, 1] = j
- */
-    __pyx_t_3 = (__pyx_v_b + 2);
-    for (__pyx_t_4 = (__pyx_v_b - 1); __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
-      __pyx_v_y = __pyx_t_4;
-
-      /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":140
- *     for x in range(a - 1, a + 2):
- *         for y in range(b - 1, b + 2):
- *             flow_arr[x, y, 0] = i             # <<<<<<<<<<<<<<
- *             flow_arr[x, y, 1] = j
- * 
- */
-      __pyx_t_5 = __pyx_v_x;
-      __pyx_t_6 = __pyx_v_y;
-      __pyx_t_7 = 0;
-      *((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_flow_arr.data + __pyx_t_5 * __pyx_v_flow_arr.strides[0]) ) + __pyx_t_6 * __pyx_v_flow_arr.strides[1]) ) + __pyx_t_7 * __pyx_v_flow_arr.strides[2]) )) = __pyx_v_i;
-
-      /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":141
- *         for y in range(b - 1, b + 2):
- *             flow_arr[x, y, 0] = i
- *             flow_arr[x, y, 1] = j             # <<<<<<<<<<<<<<
- * 
- * 
- */
-      __pyx_t_8 = __pyx_v_x;
-      __pyx_t_9 = __pyx_v_y;
-      __pyx_t_10 = 1;
-      *((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_flow_arr.data + __pyx_t_8 * __pyx_v_flow_arr.strides[0]) ) + __pyx_t_9 * __pyx_v_flow_arr.strides[1]) ) + __pyx_t_10 * __pyx_v_flow_arr.strides[2]) )) = __pyx_v_j;
-    }
-  }
-
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":134
- * @cython.boundscheck(False) # turn off bounds-checking for entire function
- * @cython.wraparound(False)
- * cdef void set_flow_at_point(int a, int b, float i, float j, float[:,:,:] flow_arr) nogil:             # <<<<<<<<<<<<<<
- *     cdef int x
- *     cdef int y
- */
-
-  /* function exit code */
-}
-
-/* "triplet_flow_loss/slow_flow_calculator_cython.pyx":146
- * @cython.boundscheck(False) # turn off bounds-checking for entire function
- * @cython.wraparound(False)
  * cdef inline float dist(float[:,:,:] left_features, float[:,:,:] right_features,             # <<<<<<<<<<<<<<
  *                 int i, int j, int a, int b, int feature_depth) nogil:
  *     cdef float current_dist = 0
@@ -4008,7 +4034,7 @@ static CYTHON_INLINE float __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cy
   Py_ssize_t __pyx_t_7;
   Py_ssize_t __pyx_t_8;
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":148
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":136
  * cdef inline float dist(float[:,:,:] left_features, float[:,:,:] right_features,
  *                 int i, int j, int a, int b, int feature_depth) nogil:
  *     cdef float current_dist = 0             # <<<<<<<<<<<<<<
@@ -4017,7 +4043,7 @@ static CYTHON_INLINE float __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cy
  */
   __pyx_v_current_dist = 0.0;
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":149
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":137
  *                 int i, int j, int a, int b, int feature_depth) nogil:
  *     cdef float current_dist = 0
  *     cdef float temp = 0             # <<<<<<<<<<<<<<
@@ -4026,7 +4052,7 @@ static CYTHON_INLINE float __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cy
  */
   __pyx_v_temp = 0.0;
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":151
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":139
  *     cdef float temp = 0
  *     cdef int k
  *     for k in range(feature_depth):             # <<<<<<<<<<<<<<
@@ -4037,7 +4063,7 @@ static CYTHON_INLINE float __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cy
   for (__pyx_t_2 = 0; __pyx_t_2 < __pyx_t_1; __pyx_t_2+=1) {
     __pyx_v_k = __pyx_t_2;
 
-    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":152
+    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":140
  *     cdef int k
  *     for k in range(feature_depth):
  *         temp = <float> left_features[i, j, k] - <float> right_features[a, b, k]             # <<<<<<<<<<<<<<
@@ -4052,7 +4078,7 @@ static CYTHON_INLINE float __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cy
     __pyx_t_8 = __pyx_v_k;
     __pyx_v_temp = (((float)(*((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_left_features.data + __pyx_t_3 * __pyx_v_left_features.strides[0]) ) + __pyx_t_4 * __pyx_v_left_features.strides[1]) ) + __pyx_t_5 * __pyx_v_left_features.strides[2]) )))) - ((float)(*((float *) ( /* dim=2 */ (( /* dim=1 */ (( /* dim=0 */ (__pyx_v_right_features.data + __pyx_t_6 * __pyx_v_right_features.strides[0]) ) + __pyx_t_7 * __pyx_v_right_features.strides[1]) ) + __pyx_t_8 * __pyx_v_right_features.strides[2]) )))));
 
-    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":153
+    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":141
  *     for k in range(feature_depth):
  *         temp = <float> left_features[i, j, k] - <float> right_features[a, b, k]
  *         current_dist += temp ** 2             # <<<<<<<<<<<<<<
@@ -4062,7 +4088,7 @@ static CYTHON_INLINE float __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cy
     __pyx_v_current_dist = (__pyx_v_current_dist + powf(__pyx_v_temp, 2.0));
   }
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":154
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":142
  *         temp = <float> left_features[i, j, k] - <float> right_features[a, b, k]
  *         current_dist += temp ** 2
  *     return sqrt(current_dist)             # <<<<<<<<<<<<<<
@@ -4072,7 +4098,7 @@ static CYTHON_INLINE float __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cy
   __pyx_r = sqrt(__pyx_v_current_dist);
   goto __pyx_L0;
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":146
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":134
  * @cython.boundscheck(False) # turn off bounds-checking for entire function
  * @cython.wraparound(False)
  * cdef inline float dist(float[:,:,:] left_features, float[:,:,:] right_features,             # <<<<<<<<<<<<<<
@@ -4085,7 +4111,7 @@ static CYTHON_INLINE float __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cy
   return __pyx_r;
 }
 
-/* "triplet_flow_loss/slow_flow_calculator_cython.pyx":157
+/* "triplet_flow_loss/slow_flow_calculator_cython.pyx":145
  * 
  * 
  * cdef inline int max_int(int a, int b) nogil:             # <<<<<<<<<<<<<<
@@ -4097,7 +4123,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
   int __pyx_r;
   int __pyx_t_1;
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":158
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":146
  * 
  * cdef inline int max_int(int a, int b) nogil:
  *     if a < b:             # <<<<<<<<<<<<<<
@@ -4107,7 +4133,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
   __pyx_t_1 = ((__pyx_v_a < __pyx_v_b) != 0);
   if (__pyx_t_1) {
 
-    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":159
+    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":147
  * cdef inline int max_int(int a, int b) nogil:
  *     if a < b:
  *         return b             # <<<<<<<<<<<<<<
@@ -4117,7 +4143,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
     __pyx_r = __pyx_v_b;
     goto __pyx_L0;
 
-    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":158
+    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":146
  * 
  * cdef inline int max_int(int a, int b) nogil:
  *     if a < b:             # <<<<<<<<<<<<<<
@@ -4126,7 +4152,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
  */
   }
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":161
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":149
  *         return b
  *     else:
  *         return a             # <<<<<<<<<<<<<<
@@ -4138,7 +4164,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
     goto __pyx_L0;
   }
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":157
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":145
  * 
  * 
  * cdef inline int max_int(int a, int b) nogil:             # <<<<<<<<<<<<<<
@@ -4151,7 +4177,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
   return __pyx_r;
 }
 
-/* "triplet_flow_loss/slow_flow_calculator_cython.pyx":164
+/* "triplet_flow_loss/slow_flow_calculator_cython.pyx":152
  * 
  * 
  * cdef inline int min_int(int a, int b) nogil:             # <<<<<<<<<<<<<<
@@ -4163,7 +4189,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
   int __pyx_r;
   int __pyx_t_1;
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":165
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":153
  * 
  * cdef inline int min_int(int a, int b) nogil:
  *     if a > b:             # <<<<<<<<<<<<<<
@@ -4173,7 +4199,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
   __pyx_t_1 = ((__pyx_v_a > __pyx_v_b) != 0);
   if (__pyx_t_1) {
 
-    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":166
+    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":154
  * cdef inline int min_int(int a, int b) nogil:
  *     if a > b:
  *         return b             # <<<<<<<<<<<<<<
@@ -4183,7 +4209,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
     __pyx_r = __pyx_v_b;
     goto __pyx_L0;
 
-    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":165
+    /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":153
  * 
  * cdef inline int min_int(int a, int b) nogil:
  *     if a > b:             # <<<<<<<<<<<<<<
@@ -4192,7 +4218,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
  */
   }
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":168
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":156
  *         return b
  *     else:
  *         return a             # <<<<<<<<<<<<<<
@@ -4204,7 +4230,7 @@ static CYTHON_INLINE int __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cyth
     goto __pyx_L0;
   }
 
-  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":164
+  /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":152
  * 
  * 
  * cdef inline int min_int(int a, int b) nogil:             # <<<<<<<<<<<<<<
@@ -19169,7 +19195,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 65, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 64, __pyx_L1_error)
   __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(1, 218, __pyx_L1_error)
   __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) __PYX_ERR(1, 799, __pyx_L1_error)
   __pyx_builtin_ImportError = __Pyx_GetBuiltinName(__pyx_n_s_ImportError); if (!__pyx_builtin_ImportError) __PYX_ERR(1, 989, __pyx_L1_error)

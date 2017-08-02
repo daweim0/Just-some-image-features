@@ -99,7 +99,7 @@ class lov_synthetic(datasets.imdb):
                 'Path does not exist: {}'.format(image_set_file)
 
         with open(image_set_file) as f:
-            image_index = [x.rstrip('\n') for x in f.readlines()]
+            image_index = [x.rstrip('\n').split(" ") for x in f]
         return image_index
 
     def _get_default_path(self):
@@ -171,20 +171,27 @@ class lov_synthetic(datasets.imdb):
         Load class name and meta data
         """
         # image path
-        image_path = self.image_path_from_index(index)
+        image_path_l = self.image_path_from_index(index[0])
+
+        image_path_r = self.image_path_from_index(index[1])
 
         # depth path
-        depth_path = self.depth_path_from_index(index)
+        depth_path_l = self.depth_path_from_index(index[0])
+        depth_path_r = self.depth_path_from_index(index[1])
 
         # metadata path
-        pose_path = self.pose_path_from_index(index)
+        pose_path_l = self.pose_path_from_index(index[0])
+        pose_path_r = self.pose_path_from_index(index[1])
 
         # parse image name
-        video_id = index.split("/")[0]
+        video_id = index[0].split("/")[0]
         
-        return {'image': image_path,
-                'depth': depth_path,
-                'pose': pose_path,
+        return {'image': image_path_l,
+                'image_right': image_path_r,
+                'depth': depth_path_l,
+                'depth_right': depth_path_r,
+                'pose': pose_path_l,
+                'pose_right': pose_path_r,
                 'video_id': video_id,
                 'flipped': False}
 
