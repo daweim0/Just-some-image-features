@@ -1,0 +1,4 @@
+/home/davidm/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/171.4694.31/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/davidm/DA-RNN/DA-RNN/lib/triplet_flow_loss
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/davidm/DA-RNN/DA-RNN/lib/triplet_flow_loss/cmake-build-debug

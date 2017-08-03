@@ -18,7 +18,7 @@ limitations under the License.
 
 //#define DEBUG_NAN
 
-const int n_target_triplets = 40;  // per object
+const int n_target_triplets = 100;  // per object
 const bool dense_sampling = false;
 const int MAX_ITERS = 10000;
 
@@ -403,15 +403,15 @@ public:
             }
         }
 
-//
-//        std::cout << "[";
-//        for (int i = 0; i < triplets.size()/3; i++) {
-//            std::cout  << "[" << triplets[i * 3] << ", " << triplets[i * 3 + 1] << ", " << triplets[i*3+2] << "]";
-//            if(i + 1 != triplets.size()/3) {
-//                std::cout << ",";
-//            }
-//        }
-//        std::cout << "]" << std::endl;
+
+        std::cout << "[";
+        for (int i = 0; i < triplets.size()/3; i++) {
+            std::cout  << "[" << triplets[i * 3] << ", " << triplets[i * 3 + 1] << ", " << triplets[i*3+2] << "]";
+            if(i + 1 != triplets.size()/3) {
+                std::cout << ",";
+            }
+        }
+        std::cout << "]" << std::endl;
 
 
         double loss = 0;

@@ -20,6 +20,7 @@ class lov_synthetic(datasets.imdb):
                          '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', '011_banana', '019_pitcher_base', \
                          '021_bleach_cleanser', '024_bowl', '025_mug', '035_power_drill', '036_wood_block', '037_scissors', '040_large_marker', \
                          '051_large_clamp', '052_extra_large_clamp', '061_foam_brick')
+        self._blacklist = {'007_tuna_fish_can', '011_banana', '019_pitcher_base', '024_bowl', '025_mug', '036_wood_block', '037_scissors', '051_large_clamp', '052_extra_large_clamp', '061_foam_brick'}
 
         self._class_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), \
                               (128, 0, 0), (0, 128, 0), (0, 0, 128), (128, 128, 0), (128, 0, 128), (0, 128, 128), \
@@ -151,13 +152,12 @@ class lov_synthetic(datasets.imdb):
         #     with open(cache_file, 'rb') as fid:
         #         roidb = cPickle.load(fid)
         #     print '{} gt roidb loaded from {}'.format(self.name, cache_file)
-        #     print 'class weights: ', roidb[0]['class_weights']
+        #     # print 'class weights: ', roidb[0]['class_weights']
         #     return roidb
 
         # self.compute_class_weights()
 
-        gt_roidb = [self._load_lov_annotation(index)
-                    for index in self.image_index]
+        gt_roidb = [self._load_lov_annotation(index) for index in self.image_index if index[0].split("/")[0] not in self._blacklist]
 
         # with open(cache_file, 'wb') as fid:
         #     cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)

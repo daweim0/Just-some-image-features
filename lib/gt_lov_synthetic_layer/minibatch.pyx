@@ -96,7 +96,7 @@ cdef _get_image_blob(roidb, scale_ind, voxelizer):
     cdef float[:, :, :] flow_depth_m
     cdef float[:, :, :] im_left_processed_m
     cdef float[:, :, :] im_left_warped_m
-    cdef float[:, :, :] end_point_depths_m
+    # cdef float[:, :, :] end_point_depths_m
     cdef int[:, :] occluded_m
     cdef float[:, :] x_m
     cdef float[:, :] y_m
@@ -122,15 +122,12 @@ cdef _get_image_blob(roidb, scale_ind, voxelizer):
         bg_color = [random.randint(0, 256), random.randint(0, 256), random.randint(0, 256), 0]
 
         im_left_raw = cv2.imread(roidb[i]['image'], cv2.IMREAD_UNCHANGED)
-        try:
-            shape_0 = im_left_raw.shape[0]
-            shape_1 = im_left_raw.shape[1]
-            for a in range(shape_0):
-                for b in range(shape_1):
-                    if im_left_raw[a, b, 3] == 0:
-                        im_left_raw[a, b] = bg_color
-        except:
-            pass
+        shape_0 = im_left_raw.shape[0]
+        shape_1 = im_left_raw.shape[1]
+        for a in range(shape_0):
+            for b in range(shape_1):
+                if im_left_raw[a, b, 3] == 0:
+                    im_left_raw[a, b] = bg_color
         im_left = pad_im(im_left_raw[:, :, :3], 16).astype(np.float32)
         im_left -= cfg.PIXEL_MEANS
         im_left_processed = cv2.resize(im_left, None, None, fx=im_scale, fy=im_scale,
@@ -138,15 +135,12 @@ cdef _get_image_blob(roidb, scale_ind, voxelizer):
         processed_left.append(im_left_processed)
 
         im_right_raw = cv2.imread(roidb[i]['image_right'], cv2.IMREAD_UNCHANGED)
-        try:
-            shape_0 = im_right_raw.shape[0]
-            shape_1 = im_right_raw.shape[1]
-            for a in range(shape_0):
-                for b in range(shape_1):
-                    if im_right_raw[a, b, 3] == 0:
-                        im_right_raw[a, b] = bg_color
-        except:
-            pass
+        shape_0 = im_right_raw.shape[0]
+        shape_1 = im_right_raw.shape[1]
+        for a in range(shape_0):
+            for b in range(shape_1):
+                if im_right_raw[a, b, 3] == 0:
+                    im_right_raw[a, b] = bg_color
         im_right = pad_im(im_right_raw[:, :, :3], 16).astype(np.float32)
         im_right -= cfg.PIXEL_MEANS
         im_right_processed = cv2.resize(im_right, None, None, fx=im_scale, fy=im_scale,
@@ -187,15 +181,15 @@ cdef _get_image_blob(roidb, scale_ind, voxelizer):
 
         occluded[depth_raw == 0] = 1
 
-        end_point_depths = np.zeros([flow_depth.shape[0], flow_depth.shape[1], 3], dtype=np.float32)
-        im_left_warped = im_left_processed.copy() * 0
+        # end_point_depths = np.zeros([flow_depth.shape[0], flow_depth.shape[1], 3], dtype=np.float32)
+        # im_left_warped = im_left_processed.copy() * 0
 
         flow_depth_m = flow_depth.astype(np.float32)
         im_left_processed_m = im_left_processed.astype(np.float32)
         im_left_processed_m = im_left_processed.astype(np.float32)
-        end_point_depths_m = end_point_depths.astype(np.float32)
+        # end_point_depths_m = end_point_depths.astype(np.float32)
         occluded_m = occluded.astype(np.int32)
-        im_left_warped_m = im_left_warped.astype(np.float32)
+        # im_left_warped_m = im_left_warped.astype(np.float32)
         x_m = x.astype(np.float32)
         y_m = y.astype(np.float32)
         z_m = z.astype(np.float32)
@@ -224,8 +218,8 @@ cdef _get_image_blob(roidb, scale_ind, voxelizer):
                 if not ((0 <= end_x < shape_1) and (0 <= end_y < shape_0)):
                     pass
                 elif depth2_m[end_y, end_x] * 0.997 < z_m[0, index_1d] < depth2_m[end_y, end_x] * 1.003:
-                    # flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
-                    # flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
+                    flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
+                    flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
                     # end_point_depths_m[end_y, end_x, 0] = z_m[0, index_1d]
                     # im_left_warped_m[end_y, end_x, 0] = im_left_processed_m[a, b, 0]
                     # im_left_warped_m[end_y, end_x, 1] = im_left_processed_m[a, b, 1]
@@ -270,7 +264,8 @@ cdef _get_image_blob(roidb, scale_ind, voxelizer):
     else:
         left_labels = im_list_to_blob(processed_left_labels, 2, mess_up_single_channel=True)
         right_labels = im_list_to_blob(processed_right_labels, 2, mess_up_single_channel=True)
-    warped = im_list_to_blob(processed_warped, 3)
+    # warped = im_list_to_blob(processed_warped, 3)
+    warped = [[0]]
 
     return left, right, flow, occluded, left_labels, right_labels, depth, right_depth, warped
 
@@ -319,7 +314,7 @@ def _process_label_image(label_image, class_colors, class_weights):
         for i in xrange(len(class_colors)):
             I = np.where(label_image == i)
             label_index[I[0], I[1], i] = class_weights[i]
-    
+
     return label_index
 
 
@@ -505,4 +500,3 @@ def display_img(img, title, iiiiii, x_plots, y_plots, fig):
     ax2.set_title(title)
     iiiiii += 1
     return iiiiii
-

@@ -37,6 +37,7 @@ cdef compute_flow_helper(np.ndarray[np.float32_t, ndim=3] left_features_obj,
     # assert np.array_equal(left_features.shape, right_features.shape)
     # assert np.array_equal(left_features.shape[0:2], mask.shape[0:2])
 
+
     cdef int start_a, stop_a, start_b, stop_b
     cdef int left_len_0, left_len_1, right_len_0, right_len_1, feature_depth, neighborhood_len
     left_len_0 = <int> left_features_obj.shape[0]

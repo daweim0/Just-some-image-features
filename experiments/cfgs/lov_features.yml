@@ -1,14 +1,15 @@
 EXP_DIR: lov_synthetic_features
 INPUT: LEFT_RIGHT_CORRESPONDENCE
-NETWORK: net_labeled_multi_scale_features
+NETWORK: net_labeled_features_deeper
+#NETWORK: net_labeled_multi_scale_features
 LOSS_FUNC: L2
 PUPPER_DATASET: False
 NORMALIZE_IMAGES: False
 NET_CONF:
   MATCHING_STAGE_SCALE: 1.0
   CONV3_SKIP_LINK: True
-  CONV2_SKIP_LINK: False
-  CONV1_SKIP_LINK: False
+  CONV2_SKIP_LINK: True
+  CONV1_SKIP_LINK: True
   NEGATIVE_RADIUS: 500
 TRAIN:
   CHROMATIC: False
@@ -19,8 +20,8 @@ TRAIN:
   GRID_SIZE: 256
   IMS_PER_BATCH: 1
   LEARNING_RATE: 0.0001
-  LEARNING_RATE_ADAM: 0.000001
-  MOMENTUM: 0.9
+  LEARNING_RATE_ADAM: 0.00000001
+  MOMENTUM: 0.5
   NUM_CLASSES: 10
   NUM_STEPS: 5
   NUM_UNITS: 64
@@ -31,7 +32,7 @@ TRAIN:
   SNAPSHOT_INFIX: lov_features
   SNAPSHOT_ITERS: 1000
   SNAPSHOT_PREFIX: vgg16_flow
-  STEPSIZE: 7500
+  STEPSIZE: 15000
   USE_MASKS: True
   TRAINABLE: True  # only sets if the vgg16 weights are trainable, has no effect on rest of network
   VISUALIZE: False

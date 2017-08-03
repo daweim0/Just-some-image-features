@@ -439,222 +439,267 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
             EPE_list.append(average_EPE)
         else:
             global iiiiii, x_plots, y_plots, axes_left_list, axes_right_list, fig
-            fig = plt.figure()
+            fig = plt.figure(figsize=(12.0, 9.0))
             iiiiii = 1
-            x_plots = 4
-            y_plots = 3
             axes_left_list = list()
             axes_right_list = list()
 
-            # show left
-            im_left = fix_rgb_image(left_blob[0])
-            ax1 = fig.add_subplot(y_plots, x_plots, iiiiii)
-            ax1.imshow(im_left)
-            ax1.set_title("left image")
-            iiiiii += 1
-            axes_left_list.append(ax1)
+            show_arrows = False
 
-            # show right
-            im_right = fix_rgb_image(right_blob[0])
-            ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-            ax2.imshow(im_right)
-            ax2.set_title("right image (red dot is predicted flow, green is ground truth)")
-            iiiiii += 1
-            axes_right_list.append(ax2)
-            #
-            # # show right
-            # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-            # ax2.imshow(sintel_utils.sintel_compute_color(gt_flow))
-            # ax2.set_title("flow)")
-            # iiiiii += 1
-            # axes_right_list.append(ax2)
-            #
-            # # show right
-            # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-            # ax2.imshow(sintel_utils.raw_color_from_flow(gt_flow))
-            # ax2.set_title("flow")
-            # iiiiii += 1
-            # axes_left_list.append(ax2)
+            if show_arrows:
+                x_plots = 1
+                y_plots = 2
 
-            # show right
-            ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-            ax2.imshow(((np.squeeze(occluded_blob[0]) * -1 + 1)[:, :, np.newaxis] * im_left).astype(np.uint8))
-            ax2.set_title("occluded")
-            iiiiii += 1
-            axes_left_list.append(ax2)
+                lr_arr = np.concatenate([left_blob[0], right_blob[0]], axis=1)
+                lr_img = fix_rgb_image(lr_arr)
+                ax1 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                ax1.imshow(lr_img)
+                ax1.set_title("left image, right image")
+                iiiiii += 1
+                # axes_left_list.append(ax1)
 
-            # warped
-            ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-            ax2.imshow(fix_rgb_image(np.squeeze(warped_blob[0]).astype(np.uint8)))
-            ax2.set_title("warped left image")
-            iiiiii += 1
-            axes_right_list.append(ax2)
-
-            average_diff = np.mean(np.abs(warped_blob[0].astype(np.float32) - right_blob[0])) * \
-                           (np.product(right_blob[0].shape) / np.count_nonzero(warped_blob[0]))
-
-            # create flow images, but don't display them yet
-            gt_flow_color_square = sintel_utils.sintel_compute_color(gt_flow)
-            gt_flow_raw_color = sintel_utils.raw_color_from_flow(gt_flow)
-            gt_flow_plot_position = iiiiii
-            iiiiii += 1
-
-            computed_flows_plot_positions = list()
-            computed_flows_color_square = list()
-            computed_flows_raw_color = list()
-            for i in range(len(flow_arrays)):
-                computed_flows_color_square.append(sintel_utils.sintel_compute_color(flow_arrays[i]))
-                computed_flows_raw_color.append(sintel_utils.raw_color_from_flow(flow_arrays[i]))
-                computed_flows_plot_positions.append(iiiiii)
+                flow_arr = np.concatenate([gt_flow, predicted_flow], axis=1)
+                flow_img = sintel_utils.sintel_compute_color(flow_arr)
+                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                ax2.imshow(flow_img, )
+                ax2.set_title("gt flow, predicted flow")
                 iiiiii += 1
 
-            gt_flow_ax = None
-            def plot_flow_images(color_square_not_raw):
-                gt_flow_ax = fig.add_subplot(y_plots, x_plots, gt_flow_plot_position)
-                # ax3.imshow(gt_flow_im)
-                if color_square_not_raw:
-                    gt_flow_ax.imshow(gt_flow_color_square)
-                else:
-                    gt_flow_ax.imshow(gt_flow_raw_color)
-                gt_flow_ax.set_title("gt flow")
-                axes_left_list.append(gt_flow_ax)
+                label_arr = np.sum(left_labels_blob[0][:, :, 1:], axis=2)  # gets rid of background
+                occluded = occluded_blob[0][:, :, 0]  # to get rid of len one dimension on the end
+                n_arrows = 10
+                spacing = int(np.sqrt(np.count_nonzero((1 - occluded) * label_arr) / n_arrows))
+                # spacing = 100
+                for x in range(0, gt_flow.shape[1], spacing):
+                    for y in range(int((x * 0.29) % (spacing / 2)), gt_flow.shape[0], spacing):
+                        x_ = max(0, min(x + random.randint(-1 * spacing / 4, spacing / 4), gt_flow.shape[1] - 1))
+                        y_ = max(0, min(y + random.randint(-1 * spacing / 4, spacing / 4), gt_flow.shape[0] - 1))
+                        if occluded[y_, x_] == 0 and label_arr[y_, x_] != 0:
+                            r_offset = predicted_flow[y_, x_]
+                            r_offset[0] += int(gt_flow.shape[1]) + x_
+                            r_offset[1] += y_
 
+                            color = np.random.rand(3, )
+                            ax1.plot([x_, r_offset[0]], [y_, r_offset[1]], 'k-', lw=1.0, color=color)
+                            ax1.plot([x_, r_offset[0]], [y_, r_offset[1]], marker='o', color=color, markersize=3)
+
+            else:
+                x_plots = 4
+                y_plots = 3
+
+                # show left
+                im_left = fix_rgb_image(left_blob[0])
+                ax1 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                ax1.imshow(im_left)
+                ax1.set_title("left image")
+                iiiiii += 1
+                axes_left_list.append(ax1)
+
+                # show right
+                im_right = fix_rgb_image(right_blob[0])
+                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                ax2.imshow(im_right)
+                ax2.set_title("right image (red dot is predicted flow, green is ground truth)")
+                iiiiii += 1
+                axes_right_list.append(ax2)
+
+                # show right
+                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                ax2.imshow(sintel_utils.sintel_compute_color(gt_flow))
+                ax2.set_title("flow)")
+                iiiiii += 1
+                axes_left_list.append(ax2)
+
+                # show right
+                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                ax2.imshow(sintel_utils.raw_color_from_flow(gt_flow))
+                ax2.set_title("flow")
+                iiiiii += 1
+                axes_left_list.append(ax2)
+
+                # show right
+                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                ax2.imshow(((np.squeeze(occluded_blob[0]) * -1 + 1)[:, :, np.newaxis] * im_left).astype(np.uint8))
+                ax2.set_title("occluded")
+                iiiiii += 1
+                axes_left_list.append(ax2)
+
+                # # warped
+                # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                # ax2.imshow(fix_rgb_image(np.squeeze(warped_blob[0]).astype(np.uint8)))
+                # ax2.set_title("warped left image")
+                # iiiiii += 1
+                # axes_right_list.append(ax2)
+
+                # average_diff = np.mean(np.abs(warped_blob[0].astype(np.float32) - right_blob[0])) * \
+                #                (np.product(right_blob[0].shape) / np.count_nonzero(warped_blob[0]))
+
+                # create flow images, but don't display them yet
+                gt_flow_color_square = sintel_utils.sintel_compute_color(gt_flow)
+                gt_flow_raw_color = sintel_utils.raw_color_from_flow(gt_flow)
+                gt_flow_plot_position = iiiiii
+                iiiiii += 1
+
+                computed_flows_plot_positions = list()
+                computed_flows_color_square = list()
+                computed_flows_raw_color = list()
                 for i in range(len(flow_arrays)):
-                    ax7 = fig.add_subplot(y_plots, x_plots, computed_flows_plot_positions[i])
+                    computed_flows_color_square.append(sintel_utils.sintel_compute_color(flow_arrays[i]))
+                    computed_flows_raw_color.append(sintel_utils.raw_color_from_flow(flow_arrays[i]))
+                    computed_flows_plot_positions.append(iiiiii)
+                    iiiiii += 1
+
+                gt_flow_ax = None
+                def plot_flow_images(color_square_not_raw):
+                    gt_flow_ax = fig.add_subplot(y_plots, x_plots, gt_flow_plot_position)
+                    # ax3.imshow(gt_flow_im)
                     if color_square_not_raw:
-                        ax7.imshow(computed_flows_color_square[i])
+                        gt_flow_ax.imshow(gt_flow_color_square)
                     else:
-                        ax7.imshow(computed_flows_raw_color[i])
-                    ax7.set_title("raw predicted flow at scale " + str(i))
-                    axes_left_list.append(ax7)
+                        gt_flow_ax.imshow(gt_flow_raw_color)
+                    gt_flow_ax.set_title("gt flow")
+                    axes_left_list.append(gt_flow_ax)
 
-            plot_flow_images(False)
+                    for i in range(len(flow_arrays)):
+                        ax7 = fig.add_subplot(y_plots, x_plots, computed_flows_plot_positions[i])
+                        if color_square_not_raw:
+                            ax7.imshow(computed_flows_color_square[i])
+                        else:
+                            ax7.imshow(computed_flows_raw_color[i])
+                        ax7.set_title("raw predicted flow at scale " + str(i))
+                        axes_left_list.append(ax7)
 
-            ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-            ax2.imshow(np.squeeze(depth_blob[0]))
-            ax2.set_title("depth")
-            iiiiii += 1
-            axes_left_list.append(ax2)
+                plot_flow_images(False)
 
-            left_labels = (left_labels_blob[0] * np.arange(1, left_labels_blob[0].shape[2] + 1)).sum(axis=2)
-            right_labels = (right_labels_blob[0] * np.arange(1, right_labels_blob[0].shape[2] + 1)).sum(axis=2)
-            display_img(np.squeeze(left_labels), "left labels")
-            display_img(np.squeeze(right_labels), "right labels", right=True)
+                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                ax2.imshow(np.squeeze(depth_blob[0]))
+                ax2.set_title("depth")
+                iiiiii += 1
+                axes_left_list.append(ax2)
 
-            display_img(sintel_utils.colorize_features(results[0]), "left features", right=False)
-            display_img(sintel_utils.colorize_features(results[1]), "right features", right=True)
+                left_labels = (left_labels_blob[0] * np.arange(1, left_labels_blob[0].shape[2] + 1)).sum(axis=2)
+                right_labels = (right_labels_blob[0] * np.arange(1, right_labels_blob[0].shape[2] + 1)).sum(axis=2)
+                display_img(np.squeeze(left_labels), "left labels")
+                display_img(np.squeeze(right_labels), "right labels", right=True)
+
+                display_img(sintel_utils.colorize_features(results[0]), "left features", right=False)
+                display_img(sintel_utils.colorize_features(results[1]), "right features", right=True)
+
+                x_points = list()
+                y_points = list()
+                x_points_right = list()
+                y_points_right = list()
+                colors = list()
+
+                global red_point, green_point, blue_point
+                red_point = None
+                green_point = None
+                blue_point = None
+
+                def onclick(event):
+                    print(
+                    'button', event.button, 'x=', event.x, 'y=', event.y, 'xdata=', event.xdata, 'ydata=', event.ydata)
+                    for ax in axes_left_list:
+                        data_transformer = ax.transData.inverted()
+                        x_left, y_left = data_transformer.transform([event.x, event.y])
+                        if -1 <= x_left <= im_left.shape[1] + 3 and -1 <= y_left <= im_left.shape[0] + 3:
+                            print("\t x transformed:", x_left, "y transformed:", y_left)
+                            if event.xdata is not None and event.ydata is not None:
+                                if occluded_blob[0][int(event.ydata), int(event.xdata)] != 1:
+                                    x_points_right.append(event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0]))
+                                    y_points_right.append(event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1]))
+                                    x_points.append(event.xdata)
+                                    y_points.append(event.ydata)
+                                    color = random.random()
+
+                                    l_feature = results[0][0, int(event.ydata), int(event.xdata)]
+                                    r_feature_gt = results[1][0, int(y_points_right[-1]), int(x_points_right[-1])]
+                                    r_feature_pred = results[1][0, int(event.ydata) + int(predicted_flow[int(event.ydata), int(event.xdata), 1]),
+                                                                int(event.xdata) + int(predicted_flow[int(event.ydata), int(event.xdata), 0])]
+                                    print "dist between gt l and r features is", np.sqrt(np.sum(np.power(l_feature - r_feature_gt, 2)))
+                                    print "dist between predicted l and r features is", np.sqrt(np.sum(np.power(l_feature - r_feature_pred, 2)))
+
+                                    for sub_ax in axes_left_list:
+                                        sub_ax.scatter([event.xdata], [event.ydata], c=[color], s=7, marker='1')
+                                    for sub_ax in axes_right_list:
+                                        global red_point, green_point, blue_point
+
+                                        if blue_point is not None:
+                                            # blue_point.remove()
+                                            red_point.remove()
+                                            green_point.remove()
+                                        # blue_point = sub_ax.scatter([event.xdata], [event.ydata], c='BLUE', s=7, marker='p')
+                                        red_point = sub_ax.scatter([event.xdata + int(predicted_flow[int(event.ydata), int(event.xdata), 0])],
+                                                       [event.ydata + int(predicted_flow[int(event.ydata), int(event.xdata), 1])], c='RED', edgecolors='WHITE', s=8, marker='o')
+                                        green_point = sub_ax.scatter([event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0])],
+                                                       [event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1])], c='GREEN', s=5, marker='1')
+                                        # green_point = sub_ax.scatter(x_points_right, y_points_right, c=colors, s=4, marker='p')
+                                else:
+                                    print "Point occluded, not drawing"
+                                fig.canvas.draw()
+                            break
+
+                cid = fig.canvas.mpl_connect('button_press_event', onclick)
+                global triplets
+                triplets = None
+
+                def handle_key_press(event):
+                    if event.key == 'c':
+                        plot_flow_images(True)
+                    elif event.key == 'r':
+                        plot_flow_images(False)
+
+                    elif event.key == 'm':
+                        pass
+
+                    elif event.key == "y":
+                        global triplets
+                        string_arr = pyperclip.paste()
+                        tup = literal_eval(string_arr)
+                        triplets = np.array(tup)
+                        triplets = triplets.transpose()
+
+                    elif event.key == "t":
+                        global triplets
+
+                        try:
+                            x_a = triplets[0, 0] % 640
+                            y_a = triplets[0, 0] / 640
+                            x_p = triplets[1, 0] % 640
+                            y_p = triplets[1, 0] / 640
+                            x_n = triplets[2, 0] % 640
+                            y_n = triplets[2, 0] / 640
+                            print "x_a", x_a, "y_a", y_a, "x_p", x_p, "y_p", y_p, "x_n", x_n, "y_n", y_n
+                            for sub_ax in axes_left_list:
+                                sub_ax.scatter([x_a], [y_a], c="BLUE", s=6, marker='p')
+                                sub_ax.scatter([x_n], [y_n], c="RED", s=4, marker='p')
+                            for sub_ax in axes_right_list:
+                                sub_ax.scatter([x_p], [y_p], c="GREEN", s=4, marker='p')
+                            fig.canvas.draw()
+
+                            triplets = triplets[:, 1:]
+                            print triplets.shape[1], "points left"
+                        except:
+                            print "data must be loaded with l before it can be plotted"
+
+
+                    else:
+                        print "key not tied to any action"
+                    # only redraw if something changed
+                    fig.canvas.draw()
+
+                fig.canvas.mpl_connect('key_press_event', handle_key_press)
+
 
             try:
-                fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image']) + "\nright image: " +
-                         str(blobs['roidb'][1]['image']) + "\naverage diff: " + str(average_diff) + " triplet_loss:" + str(results[3][0]) + " EPE:" + str(average_EPE))
+                fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image'].split("/")[-2:]) + "  right image: " +
+                             str(blobs['roidb'][0]['image_right'].split("/")[-2:]) + " triplet_loss:" + str(
+                    results[3][0]) + " EPE:" + str(average_EPE))
             except:
-                fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image']) + "\nright image: " +
-                             str(blobs['roidb'][0]['image_right']) + "\naverage diff: " + str(average_diff) + " triplet_loss:" + str(results[3][0]) + " EPE:" + str(average_EPE))
+                fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image'].split("/")[-2:]) + "  right image: " +
+                             str(blobs['roidb'][1]['image'].split("/")[-2:]) + " triplet_loss:" + str(
+                    results[3][0]) + " EPE:" + str(average_EPE))
 
-            x_points = list()
-            y_points = list()
-            x_points_right = list()
-            y_points_right = list()
-            colors = list()
-
-            global red_point, green_point, blue_point
-            red_point = None
-            green_point = None
-            blue_point = None
-
-            def onclick(event):
-                print(
-                'button', event.button, 'x=', event.x, 'y=', event.y, 'xdata=', event.xdata, 'ydata=', event.ydata)
-                for ax in axes_left_list:
-                    data_transformer = ax.transData.inverted()
-                    x_left, y_left = data_transformer.transform([event.x, event.y])
-                    if -1 <= x_left <= im_left.shape[1] + 3 and -1 <= y_left <= im_left.shape[0] + 3:
-                        print("\t x transformed:", x_left, "y transformed:", y_left)
-                        if event.xdata is not None and event.ydata is not None:
-                            if occluded_blob[0][int(event.ydata), int(event.xdata)] != 1:
-                                x_points_right.append(event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0]))
-                                y_points_right.append(event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1]))
-                                x_points.append(event.xdata)
-                                y_points.append(event.ydata)
-                                color = random.random()
-
-                                l_feature = results[0][0, int(event.ydata), int(event.xdata)]
-                                r_feature_gt = results[1][0, int(y_points_right[-1]), int(x_points_right[-1])]
-                                r_feature_pred = results[1][0, int(event.ydata) + int(predicted_flow[int(event.ydata), int(event.xdata), 1]),
-                                                            int(event.xdata) + int(predicted_flow[int(event.ydata), int(event.xdata), 0])]
-                                print "dist between gt l and r features is", np.sqrt(np.sum(np.power(l_feature - r_feature_gt, 2)))
-                                print "dist between predicted l and r features is", np.sqrt(np.sum(np.power(l_feature - r_feature_pred, 2)))
-
-                                for sub_ax in axes_left_list:
-                                    sub_ax.scatter([event.xdata], [event.ydata], c=[color], s=7, marker='1')
-                                for sub_ax in axes_right_list:
-                                    global red_point, green_point, blue_point
-
-                                    if blue_point is not None:
-                                        # blue_point.remove()
-                                        red_point.remove()
-                                        green_point.remove()
-                                    # blue_point = sub_ax.scatter([event.xdata], [event.ydata], c='BLUE', s=7, marker='p')
-                                    red_point = sub_ax.scatter([event.xdata + int(predicted_flow[int(event.ydata), int(event.xdata), 0])],
-                                                   [event.ydata + int(predicted_flow[int(event.ydata), int(event.xdata), 1])], c='RED', edgecolors='WHITE', s=8, marker='o')
-                                    green_point = sub_ax.scatter([event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0])],
-                                                   [event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1])], c='GREEN', s=5, marker='1')
-                                    # green_point = sub_ax.scatter(x_points_right, y_points_right, c=colors, s=4, marker='p')
-                            else:
-                                print "Point occluded, not drawing"
-                            fig.canvas.draw()
-                        break
-
-            cid = fig.canvas.mpl_connect('button_press_event', onclick)
-            global triplets
-            triplets = None
-
-            def handle_key_press(event):
-                if event.key == 'c':
-                    plot_flow_images(True)
-                elif event.key == 'r':
-                    plot_flow_images(False)
-
-                elif event.key == 'm':
-                    pass
-
-                elif event.key == "l":
-                    global triplets
-                    string_arr = pyperclip.paste()
-                    tup = literal_eval(string_arr)
-                    triplets = np.array(tup)
-                    triplets = triplets.transpose()
-
-                elif event.key == "t":
-                    global triplets
-
-                    try:
-                        x_a = triplets[0, 0] % 640
-                        y_a = triplets[0, 0] / 640
-                        x_p = triplets[1, 0] % 640
-                        y_p = triplets[1, 0] / 640
-                        x_n = triplets[2, 0] % 640
-                        y_n = triplets[2, 0] / 640
-                        print "x_a", x_a, "y_a", y_a, "x_p", x_p, "y_p", y_p, "x_n", x_n, "y_n", y_n
-                        for sub_ax in axes_left_list:
-                            sub_ax.scatter([x_a], [y_a], c="BLUE", s=6, marker='p')
-                            sub_ax.scatter([x_n], [y_n], c="RED", s=4, marker='p')
-                        for sub_ax in axes_right_list:
-                            sub_ax.scatter([x_p], [y_p], c="GREEN", s=4, marker='p')
-                        fig.canvas.draw()
-
-                        triplets = triplets[:, 1:]
-                        print triplets.shape[1], "points left"
-                    except:
-                        print "data must be loaded with l before it can be plotted"
-
-
-                else:
-                    print "key not tied to any action"
-                # only redraw if something changed
-                fig.canvas.draw()
-
-            fig.canvas.mpl_connect('key_press_event', handle_key_press)
 
             plt.interactive(False)
             plt.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.9, wspace=0.1, hspace=0.2)
