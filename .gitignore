@@ -7,6 +7,7 @@
 *.png
 *.jpg
 *.bmp
+*.ckpt.*
 output/*
 lib/icp/icp_main.cpp
 data/LOV/*
@@ -15,3 +16,6 @@ data/cache/*
 data/linemod/*
 data/sintel/*
 data/*
+*/.idea/*
+core
+*backup*
