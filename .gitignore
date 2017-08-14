@@ -1,3 +1,4 @@
+core
 *.mat
 *.mex*
 *.pyc
@@ -8,6 +9,8 @@
 *.jpg
 *.bmp
 *.ckpt.*
+*.py~
+*.html
 output/*
 lib/icp/icp_main.cpp
 data/LOV/*
@@ -17,6 +20,6 @@ data/linemod/*
 data/sintel/*
 data/*
 */.idea/*
-core
 *backup*
-*.html
+temp/*
+cmake-build-debug/*
