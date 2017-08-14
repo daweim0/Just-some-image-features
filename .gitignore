@@ -23,3 +23,4 @@ data/*
 *backup*
 temp/*
 cmake-build-debug/*
+lib/triplet_flow_loss/.idea/*
