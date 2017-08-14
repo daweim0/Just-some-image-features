@@ -162,19 +162,19 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         for flow_arr in flow_arrays_unscaled:
             flow_arrays.append(scipy.ndimage.zoom(flow_arr, [scale_factor, scale_factor, 1], order=1) * scale_factor)
 
-        r_to_l_predicted_flow, _, _ = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(right_pyramid_scaled, left_pyramid_scaled,
-                                           occluded_pyramid_scaled, neighborhood_len_import=search_radius/scale_factor, interpolate_after=False)
-        r_to_l_predicted_flow_l_view = np.ones(r_to_l_predicted_flow.shape, dtype=np.float32)
-        for y in range(r_to_l_predicted_flow.shape[0]):
-            for x in range(r_to_l_predicted_flow.shape[1]):
-                orrigional_point_y = int(round(r_to_l_predicted_flow[int(y), int(x), 1])) + y
-                orrigional_point_x = int(round(r_to_l_predicted_flow[int(y), int(x), 0])) + x
-                if orrigional_point_x == x and orrigional_point_y == y:
-                    continue
-                if 0 <= orrigional_point_y < r_to_l_predicted_flow.shape[0] and 0 <= orrigional_point_x < r_to_l_predicted_flow.shape[1]:
-                    r_to_l_predicted_flow_l_view[orrigional_point_y, orrigional_point_x] = [x - orrigional_point_x, y - orrigional_point_y]
-
-        r_to_l_predicted_flow_l_view = scipy.ndimage.zoom(r_to_l_predicted_flow_l_view, [scale_factor, scale_factor, 1], order=1) * scale_factor
+        # r_to_l_predicted_flow, _, _ = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(right_pyramid_scaled, left_pyramid_scaled,
+        #                                    occluded_pyramid_scaled, neighborhood_len_import=search_radius/scale_factor, interpolate_after=False)
+        # r_to_l_predicted_flow_l_view = np.ones(r_to_l_predicted_flow.shape, dtype=np.float32)
+        # for y in range(r_to_l_predicted_flow.shape[0]):
+        #     for x in range(r_to_l_predicted_flow.shape[1]):
+        #         orrigional_point_y = int(round(r_to_l_predicted_flow[int(y), int(x), 1])) + y
+        #         orrigional_point_x = int(round(r_to_l_predicted_flow[int(y), int(x), 0])) + x
+        #         if orrigional_point_x == x and orrigional_point_y == y:
+        #             continue
+        #         if 0 <= orrigional_point_y < r_to_l_predicted_flow.shape[0] and 0 <= orrigional_point_x < r_to_l_predicted_flow.shape[1]:
+        #             r_to_l_predicted_flow_l_view[orrigional_point_y, orrigional_point_x] = [x - orrigional_point_x, y - orrigional_point_y]
+        #
+        # r_to_l_predicted_flow_l_view = scipy.ndimage.zoom(r_to_l_predicted_flow_l_view, [scale_factor, scale_factor, 1], order=1) * scale_factor
 
         # flow_arrays = flow_arrays_unscaled
 
@@ -353,8 +353,8 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                 computed_flows_plot_positions.append(iiiiii)
                 iiiiii += 1
 
-                display_img(sintel_utils.sintel_compute_color(r_to_l_predicted_flow_l_view), "right to left flow")
-                display_img(np.sqrt(np.sum(np.power(r_to_l_predicted_flow_l_view - predicted_flow, 2), axis=2)), "right to left flow similarity")
+                # display_img(sintel_utils.sintel_compute_color(r_to_l_predicted_flow_l_view), "right to left flow")
+                # display_img(np.sqrt(np.sum(np.power(r_to_l_predicted_flow_l_view - predicted_flow, 2), axis=2)), "right to left flow similarity")
 
                 for image_index_pos in range(len(flow_arrays) - 1):
                     computed_flows_color_square.append(sintel_utils.sintel_compute_color(flow_arrays[image_index_pos]))
@@ -393,10 +393,10 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                 # iiiiii += 1
                 # axes_left_list.append(ax2)
 
-                # left_labels = (left_labels_blob[0] * np.arange(1, left_labels_blob[0].shape[2] + 1)).sum(axis=2)
-                # right_labels = (right_labels_blob[0] * np.arange(1, right_labels_blob[0].shape[2] + 1)).sum(axis=2)
-                # display_img(np.squeeze(left_labels), "left labels")
-                # display_img(np.squeeze(right_labels), "right labels", right=True)
+                left_labels = (left_labels_blob[0] * np.arange(1, left_labels_blob[0].shape[2] + 1)).sum(axis=2)
+                right_labels = (right_labels_blob[0] * np.arange(1, right_labels_blob[0].shape[2] + 1)).sum(axis=2)
+                display_img(np.squeeze(left_labels), "left labels")
+                display_img(np.squeeze(right_labels), "right labels", right=True)
 
                 random_matrix = np.random.rand(features_l.shape[2], 3)
                 feature_ax_list = list()

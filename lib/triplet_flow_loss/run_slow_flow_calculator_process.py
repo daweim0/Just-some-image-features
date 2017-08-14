@@ -15,7 +15,8 @@ def get_flow_parallel_pyramid(left_features, right_features, masks, neighborhood
     #TODO: justify this as the correct neighborhood_len when using a pyramid
     search_range = list([left_features[0].shape[0] / float(left_features[-1].shape[0]) * neighborhood_len_import])
     for i in range(len(left_features) - 1):
-        search_range.append(left_features[i+1].shape[0] / left_features[i].shape[0] * 2 + 4)
+        search_range.append((left_features[i+1].shape[0] / left_features[i].shape[0] + 1) * 10)
+        # search_range.append(100)
 
     output_flows = list()
 

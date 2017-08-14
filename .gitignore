@@ -19,3 +19,4 @@ data/*
 */.idea/*
 core
 *backup*
+*.html

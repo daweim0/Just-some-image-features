@@ -7,9 +7,10 @@ import math
 cimport cython
 import numpy as np
 cimport numpy as np
-from libc.math cimport sqrt
+from libc.math cimport sqrt, fabs
 from cython.parallel import parallel, prange, threadid
 from libc.stdio cimport printf
+
 
 
 def compute_flow(left_features, right_features, mask, initialization, neighborhood_len_import=6, interpolate_after=False):
@@ -61,9 +62,9 @@ cdef compute_flow_helper(np.ndarray[np.float32_t, ndim=3] left_features_obj,
 
     cdef int best_x, best_y
 
-    for i in prange(1, left_len_0 - 1, 3, nogil=True, schedule='guided', num_threads=20):
+    for i in prange(0, left_len_0, nogil=True, schedule='dynamic', num_threads=20):
     # for i in range(left_len_0):
-        for j in range(1, left_len_1 - 1, 3):
+        for j in range(0, left_len_1):
             if mask[i, j] != 0:
                 set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
             else:
@@ -136,14 +137,18 @@ cdef void set_flow_at_point(int a, int b, float i, float j, float[:,:,:] flow_ar
     cdef int x
     cdef int y
 
-    for x in range(a - 1, a + 2):
-        for y in range(b - 1, b + 2):
-            flow_arr[x, y, 0] = i
-            flow_arr[x, y, 1] = j
+    # for x in range(a - 1, a + 2):
+    #     for y in range(b - 1, b + 2):
+    #         flow_arr[x, y, 0] = i
+    #         flow_arr[x, y, 1] = j
+
+    flow_arr[a, b, 0] = i
+    flow_arr[a, b, 1] = j
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)
+@cython.cdivision(True)
 cdef inline float dist(float[:,:,:] left_features, float[:,:,:] right_features,
                 int i, int j, int a, int b, int feature_depth) nogil:
     cdef float current_dist = 0
@@ -151,8 +156,10 @@ cdef inline float dist(float[:,:,:] left_features, float[:,:,:] right_features,
     cdef int k
     for k in range(feature_depth):
         temp = <float> left_features[i, j, k] - <float> right_features[a, b, k]
-        current_dist += temp ** 2
-    return sqrt(current_dist)
+        current_dist += sqrt(fabs(temp))
+    return current_dist
+    #     current_dist += temp ** 2
+    # return sqrt(current_dist)
 
 
 cdef inline int max_int(int a, int b) nogil:
@@ -169,7 +176,7 @@ cdef inline int min_int(int a, int b) nogil:
         return a
 
 
-# # first axis
+# # first axis rsync -arvu --no-links --exclude temp --exclude '**.pyc' --exclude '**.so' --exclude '**.o' --exclude '**/data' --exclude '**/.git' --exclude output DA-RNN/ ava:tensorflow/DA-RNN/
 # if best_index_u == 0:
 #     u1 = 0
 #     u2 = 1

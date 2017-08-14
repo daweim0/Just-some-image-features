@@ -27,7 +27,6 @@ limitations under the License.
 #include <thread>
 #include <functional>
 #include <unistd.h>
-#include <csignal>
 
 
 #include "third_party/eigen3/Eigen/Core"
@@ -113,7 +112,8 @@ public:
 
 
 template <typename T>
-void do_work_unit(WorkFragment<T> &fragment, int h_start, int h_end) {
+void do_work_unit(WorkFragment<T> fragment_pointer, int h_start, int h_end) {
+    WorkFragment<T> fragment = fragment_pointer;
     for (int h = h_start; h < h_end; h++)
     {
         for (int w = 0; w < fragment.width; w++)
@@ -198,7 +198,7 @@ void do_work_unit(WorkFragment<T> &fragment, int h_start, int h_end) {
                 int data_i_index = index_i * fragment.feature_depth + c;
                 int data_j_index = index_j * fragment.feature_depth + c;
                 int data_k_index = index_k * fragment.feature_depth + c;
-		    int arr_size = fragment.batch_size * fragment.height * fragment.width * fragment.feature_depth;
+		int arr_size = fragment.batch_size * fragment.height * fragment.width * fragment.feature_depth;
 
                 if ((0 > data_i_index) || (data_i_index >= arr_size) ||
                     (0 > data_j_index) || (data_j_index >= arr_size) ||
@@ -256,8 +256,6 @@ void do_work_unit(WorkFragment<T> &fragment, int h_start, int h_end) {
                             (fragment.left_data_array[diff_i_index] - fragment.left_data_array[diff_k_index]) / fragment.n_approx_triplets;
                 }
             }
-
-            std::cout << "found valid triplet at h: " << h << ", w: " << w << std::endl;
         }
     }
 
@@ -387,6 +385,7 @@ public:
 
         for (int n = 0; n < batch_size; n++) {
             std::vector<WorkFragment<T>*> thread_vect;
+            int count = 0;
 /*
             while(count < height) {
                 if(thread_vect.size() >= N_LOSS_THREADS){
@@ -404,11 +403,10 @@ public:
 			}
                 }
 */
-            for(int count = 0; count < height; count++) {
                 WorkFragment<T> next_fragment(left_data_array, right_data_array, flow_array, occluded_array);
 
 //                thread_vect.push_back(next_fragment);
-                std::cout << "batch_size " << batch_size << std::endl;
+		std::cout << "batch_size " << batch_size << std::endl;
                 next_fragment.batch_size = batch_size;
                 next_fragment.height = height;
                 next_fragment.width = width;
@@ -428,18 +426,17 @@ public:
 //                auto func = std::bind(&WorkFragment<T>::do_work_unit, next_fragment, std::_1);
 //                std::thread t1(do_work_unit<T>, next_fragment, count, count+1);
 //                call_from_thread(count, next_fragment, count, count+1);
-                auto func = std::bind(do_work_unit<T>, next_fragment, count, count + 1);
-//            std::thread t1(func);
-//		    t1.join();
+		auto func = std::bind(do_work_unit<T>, next_fragment, count, count+1);
+                std::thread t1(func);
+		t1.join();
 //                next_fragment->this_thread = t1;
-                func();
-                loss += next_fragment.individual_loss;
-                num_triplets += next_fragment.n_triplets_added;
-                std::raise(SIGINT);
-                //		loss += thread_vect.at(i)->individual_loss;
-                //		num_triplets += thread_vect.at(i)->n_triplets_added;
+//		func();
+		loss += next_fragment.individual_loss;
+		num_triplets += next_fragment.n_triplets_added;
+//		loss += thread_vect.at(i)->individual_loss;
+//		num_triplets += thread_vect.at(i)->n_triplets_added;
 
-            }
+                count += 1;
 //            }
 
 /*		if(thread_vect.size() >= N_LOSS_THREADS){
@@ -708,4 +705,3 @@ REGISTER_KERNEL_BUILDER(Name("TripletFlowGrad").Device(DEVICE_CPU).TypeConstrain
 //};
 //
 //REGISTER_KERNEL_BUILDER(Name("TripletFlowGrad").Device(DEVICE_GPU).TypeConstraint<float>("T"), TripletFlowGradOp<Eigen::GpuDevice, float>);
-

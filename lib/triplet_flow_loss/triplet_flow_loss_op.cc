@@ -18,9 +18,11 @@ limitations under the License.
 
 //#define DEBUG_NAN
 
-const int n_target_triplets = 100;  // per object
+const int n_target_triplets = 1000;  // per object
+const int n_negatives_per_positive = 100;
 const bool dense_sampling = false;
-const int MAX_ITERS = 10000;
+const int MAX_ITERS = 50000;
+const int WARN_AT_ITER = 2000;
 
 
 #include <stdio.h>
@@ -75,7 +77,8 @@ uint32_t xorshift128()
 REGISTER_OP("TripletFlow")
 .Attr("T: {float, double}")
 .Attr("margin: float")
-.Attr("negative_radius: int")
+.Attr("positive_radius: int")  // noise on the positive point
+.Attr("negative_radius: int")  // noise on the negative point
 .Input("left_data: T")
 .Input("right_data: T")
 .Input("gt_flow: T")
@@ -109,12 +112,18 @@ public:
         // Check that margin is positive
         OP_REQUIRES(context, margin_ >= 0,
                     errors::InvalidArgument("Need margin >= 0, got ", margin_));
-        // Get the margin
+        // Get the negative radius
         OP_REQUIRES_OK(context,
                        context->GetAttr("negative_radius", &negative_radius_));
-        // Check that margin is positive
+        // Check that negative radius is positive
         OP_REQUIRES(context, negative_radius_ >= 0,
                     errors::InvalidArgument("Need negative radius >= 0, got ", negative_radius_));
+        // Get the positive radius
+        OP_REQUIRES_OK(context,
+                       context->GetAttr("positive_radius", &positive_radius_));
+        // Check that positive radius is positive
+        OP_REQUIRES(context, negative_radius_ >= 0,
+                    errors::InvalidArgument("Need positive radius >= 0, got ", positive_radius_));
     }
 
     // bottom_data: (batch_size, height, width, channels)
@@ -122,6 +131,7 @@ public:
     void Compute(OpKernelContext* context) override
     {
         signal(SIGUSR1, do_nothing);
+        raise(SIGUSR1);
 
         // Grab the input tensor
         const Tensor& left_data = context->input(0);
@@ -288,7 +298,7 @@ public:
         else {
 //            raise(SIGUSR1);
 
-            triplets.reserve(batch_size * n_target_triplets * 5 * 3); // there are normaly <= 5 objects in an image
+            triplets.reserve(batch_size * n_target_triplets * n_negatives_per_positive * 2 * 3); // there are normaly <= 5 objects in an image
             for (int n = 0; n < batch_size; n++) {
 
                 int n_objects_present = 0;
@@ -316,17 +326,18 @@ public:
                     }
                     else {
                         int n_starting_triplets = triplets.size();
-                        for (int iter = 0; (triplets.size() - n_starting_triplets < n_target_triplets) && (iter < n_target_triplets * 2); iter++) {
-                            int h = 0;
-                            int w = 0;
+                        for (int iter = 0; (triplets.size() - n_starting_triplets < n_target_triplets * n_negatives_per_positive * 3) &&
+                                (iter < n_target_triplets * 2); iter++) {
+                            int h_anchor = 0;
+                            int w_anchor = 0;
 
                             // anchor
                             int index = -1;
                             int index_positive = -1;
                             for (int i = 0; i < MAX_ITERS; i++) {
-                                h = xorshift128() % height;
-                                w = xorshift128() % width;
-                                int index_ = ((n) * height + h) * width + w;
+                                h_anchor = xorshift128() % height;
+                                w_anchor = xorshift128() % width;
+                                int index_ = ((n) * height + h_anchor) * width + w_anchor;
                                 if ((left_mask_array[(index_) * n_object_masks + current_mask_index] == 0) ||
                                                                                     (occluded_array[index_] != 0)) {
                                     continue;
@@ -339,64 +350,81 @@ public:
                                     std::cout << "\tindex*2+1: " << index_ * 2 + 1 << std::endl;
                                     assert(false);
                                 }
-                                int w_positive = w + round(flow_array[index_ * 2]);
-                                int h_positive = h + round(flow_array[index_ * 2 + 1]);
-                                if (0 > w_positive || 0 > h_positive || width <= w_positive || height <= h_positive) {
-//                        std::cout << "flow goes outside image, h: " << h << " w: " << w << std::endl;
-                                    continue;  // corresponding right image location is outside image
-                                }
+
+                                // find a offset for the positive radius
+                                int x_offset = 0;
+                                int y_offset = 0;
+                                do {
+                                    x_offset = xorshift128() % (positive_radius_ + 1);
+                                    y_offset = xorshift128() % (positive_radius_ + 1);
+                                } while (positive_radius_ >= sqrt(pow(x_offset, 2) + pow(y_offset, 2)));
+
+                                int w_positive = w_anchor + round(flow_array[index_ * 2]) + x_offset;
+                                int h_positive = h_anchor + round(flow_array[index_ * 2 + 1]) + y_offset;
                                 int index_positive_ = ((n) * height + h_positive) * width + w_positive;
 
-                                if (right_mask_array[(index_positive_) * n_object_masks + current_mask_index] == 0) {
-                                    continue;
+                                // make sure positive point is within image
+                                if (0 > w_positive || 0 > h_positive || width <= w_positive || height <= h_positive) {
+                                    continue;  // try again
                                 }
-                                assert((n * height * width <= index_positive_) && (index_positive_ < (n+1) * height * width));
 
+                                // make sure positive points isn't occluded
+                                if (right_mask_array[(index_positive_) * n_object_masks + current_mask_index] == 0) {
+                                    continue;  // try again
+                                }
+
+                                assert((n * height * width <= index_positive_) && (index_positive_ < (n+1) * height * width));
                                 index = index_;
                                 index_positive = index_positive_;
 
-                                break;  // the correct object isn't being sampled
+                                break;  // found a point that works
                             }
                             if (index == -1) {
-//                                std::cout << "(ind " << current_mask_index << ", iter " << iter << ")";
+                                std::cout << "couldn't find an anchor/positive pair (ind " << current_mask_index << ", iter " << iter << ")" << std::endl;
+                                iter = n_target_triplets * n_negatives_per_positive * 2;  // end the loop
                                 continue;
                             }
                             assert((n * height * width <= index) && (index < (n+1) * height * width));
 
 
-                            // find a negative point on the correct object
-                            int index_negative = -1;
-                            for (int iter_neg = 0; iter_neg < MAX_ITERS; iter_neg++) {
-                                // sample a negative pixel
-                                int h_negative = xorshift128() % height;
-                                int w_negative = xorshift128() % width;
-                                int index_negative_ = ((n) * height + h_negative) * width + w_negative;
+                            for (int negative_num = 0; negative_num < n_negatives_per_positive; negative_num++) {
+                                // find a negative point on the correct object
+                                int index_negative = -1;
+                                for (int iter_neg = 0; iter_neg < MAX_ITERS; iter_neg++) {
+                                    // sample a negative pixel
+                                    int h_negative = xorshift128() % height;
+                                    int w_negative = xorshift128() % width;
+                                    int index_negative_ = ((n) * height + h_negative) * width + w_negative;
 
-                                if (left_mask_array[(index_negative_) * n_object_masks + current_mask_index] != 0) {
-                                    index_negative = index_negative_;
-                                    break;  // found a point from the correct object
+                                    if (left_mask_array[(index_negative_) * n_object_masks + current_mask_index] != 0) {
+                                        if (negative_radius_ < sqrt(pow(h_negative - h_anchor, 2) + pow(w_negative - w_anchor, 2))) {
+                                            index_negative = index_negative_;
+                                            break;  // found a point from the correct object
+                                        }
+                                    }
                                 }
+                                if (index_negative == -1) {
+                                    std::cout                                            << "\tran into iteration limit looking for a negative point within object mask ("
+                                            << current_mask_index << ")" << std::endl;
+                                    iter = n_target_triplets * n_negatives_per_positive * 2;  // end the loop
+                                    break;  // didn't find the a point from the correct object
+                                }
+                                assert((n * height * width <= index_negative) &&
+                                       (index_negative < (n + 1) * height * width));
+
+
+                                // store the triplet
+                                triplets.push_back(index);
+                                triplets.push_back(index_positive);
+                                triplets.push_back(index_negative);
+
+                                assert(-1 < index && index < batch_size * height * width);
+                                assert(-1 < index_positive && index_positive < batch_size * height * width);
+                                assert(-1 < index_negative && index_negative < batch_size * height * width);
+                                assert(left_mask_array[(index) * n_object_masks + current_mask_index] != 0);
+                                assert(right_mask_array[(index_positive) * n_object_masks + current_mask_index] != 0);
+                                assert(left_mask_array[(index_negative) * n_object_masks + current_mask_index] != 0);
                             }
-                            if (index_negative == -1) {
-//                                std::cout
-//                                        << "\tran into iteration limit looking for a negative point within object mask ("
-//                                        << current_mask_index << ")" << std::endl;
-                                continue;  // didn't find the a point from the correct object
-                            }
-                            assert((n * height * width <= index_negative) && (index_negative < (n+1) * height * width));
-
-
-                            // store the triplet
-                            triplets.push_back(index);
-                            triplets.push_back(index_positive);
-                            triplets.push_back(index_negative);
-
-                            assert(-1 < index && index < batch_size * height * width);
-                            assert(-1 < index_positive && index_positive < batch_size * height * width);
-                            assert(-1 < index_negative && index_negative < batch_size * height * width);
-                            assert(left_mask_array[(index) * n_object_masks + current_mask_index] != 0);
-                            assert(right_mask_array[(index_positive) * n_object_masks + current_mask_index] != 0);
-                            assert(left_mask_array[(index_negative) * n_object_masks + current_mask_index] != 0);
                         }
                     }
                 }
@@ -404,14 +432,14 @@ public:
         }
 
 
-        std::cout << "[";
-        for (int i = 0; i < triplets.size()/3; i++) {
-            std::cout  << "[" << triplets[i * 3] << ", " << triplets[i * 3 + 1] << ", " << triplets[i*3+2] << "]";
-            if(i + 1 != triplets.size()/3) {
-                std::cout << ",";
-            }
-        }
-        std::cout << "]" << std::endl;
+//        std::cout << "[";
+//        for (int i = 0; i < triplets.size()/3; i++) {
+//           std::cout  << "[" << triplets[i * 3] << ", " << triplets[i * 3 + 1] << ", " << triplets[i*3+2] << "]";
+//            if(i + 1 != triplets.size()/3) {
+//                std::cout << ",";
+//            }
+//        }
+//        std::cout << "]" << std::endl;
 
 
         double loss = 0;
@@ -517,6 +545,7 @@ public:
 private:
     float margin_;
     int negative_radius_;
+    int positive_radius_;
 };
 
 REGISTER_KERNEL_BUILDER(Name("TripletFlow").Device(DEVICE_CPU).TypeConstraint<float>("T"), TripletFlowOp<CPUDevice, float>);

@@ -1,2 +1,0 @@
-catch signal SIGABRT
-run
