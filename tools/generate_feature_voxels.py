@@ -12,7 +12,7 @@
 import _init_paths
 # from fcn.test import test_net, test_gan
 # from fcn.test import test_net_single_frame
-from fcn.test import test_flow_net
+from fcn.voxelize import create_voxel
 from fcn.config import cfg, cfg_from_file, cfg_from_string
 from datasets.factory import get_imdb
 import argparse
@@ -98,5 +98,5 @@ if __name__ == '__main__':
     saver.restore(sess, args.model)
     print ('# Loading model weights from {:s}').format(args.model)
 
-    test_flow_net(sess, network, imdb, weights_filename)
+    create_voxel(sess, network, imdb, weights_filename, "drill")
 

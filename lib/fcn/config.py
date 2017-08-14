@@ -39,6 +39,7 @@ __C.NORMALIZE_IMAGES = False
 # these are set once the program starts running, they should not be set in a cfg file
 __C.MODE = ""
 __C.IMDB_NAME = ""
+__C.SET_VARIANT = ""
 
 #
 # Training options
@@ -93,6 +94,8 @@ __C.TRAIN.VISUALIZE_DURING_TRAIN = False
 __C.TRAIN.OPTIMIZER = 'MomentumOptimizer'
 __C.TRAIN.USE_MASKS = False
 __C.TRAIN.IMAGE_LIST_NAME = ""
+__C.TRAIN.ADD_BACKGROUNDS = False
+__C.TRAIN.ADD_NOISE = True
 
 
 __C.NET_CONF = edict()

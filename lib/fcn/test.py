@@ -46,289 +46,8 @@ import triplet_flow_loss.run_slow_flow_calculator_process
 # import pyximport; pyximport.install()
 import utils.plotting_tools
 
-# output/pupper_dataset/batch_size_2_loss_L2_optimizer_ADAM_skip_link_1_True_2_True_3_True_2017-06-29/vgg16_flow_sintel_albedo_iter_16000.ckpt
-#output/sintel_albedo_small_training_set_fewer_skiplinks_trainable/batch_size_4_loss_L2_optimizer_ADAM_skip_link_1_False_2_False_3_True_2017-07-06/vgg16_flow_sintel_albedo_iter_9000.ckpt
-
-
-def _get_image_blob(im, im_depth, meta_data):
-    """Converts an image into a network input.
-
-    Arguments:
-        im (ndarray): a color image in BGR order
-
-    Returns:
-        blob (ndarray): a data blob holding an image pyramid
-        im_scale_factors (list): list of image scales (relative to im) used
-            in the image pyramid
-    """
-    # RGB
-    im_orig = im.astype(np.float32, copy=True)
-    # mask the color image according to depth
-    if cfg.EXP_DIR == 'rgbd_scene':
-        I = np.where(im_depth == 0)
-        im_orig[I[0], I[1], :] = 0
-
-    processed_ims_rescale = []
-    im_scale = cfg.TEST.SCALES_BASE[0]
-    im_rescale = cv2.resize(im_orig / 127.5 - 1, None, None, fx=im_scale, fy=im_scale, interpolation=cv2.INTER_LINEAR)
-    processed_ims_rescale.append(im_rescale)
-
-    im_orig -= cfg.PIXEL_MEANS
-    processed_ims = []
-    im_scale_factors = []
-    assert len(cfg.TEST.SCALES_BASE) == 1
-
-    im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale, interpolation=cv2.INTER_LINEAR)
-    im_scale_factors.append(im_scale)
-    processed_ims.append(im)
-
-    # depth
-    im_orig = im_depth.astype(np.float32, copy=True)
-    im_orig = im_orig / im_orig.max() * 255
-    im_orig = np.tile(im_orig[:,:,np.newaxis], (1,1,3))
-    im_orig -= cfg.PIXEL_MEANS
-
-    processed_ims_depth = []
-    im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale, interpolation=cv2.INTER_LINEAR)
-    processed_ims_depth.append(im)
-
-    # meta data
-    K = meta_data['intrinsic_matrix'].astype(np.float32, copy=True)
-    fx = K[0, 0]
-    fy = K[1, 1]
-    cx = K[0, 2]
-    cy = K[1, 2]
-
-    # normals
-    depth = im_depth.astype(np.float32, copy=True) / float(meta_data['factor_depth'])
-    nmap = gpu_normals.gpu_normals(depth, fx, fy, cx, cy, 20.0, cfg.GPU_ID)
-    im_normal = 127.5 * nmap + 127.5
-    im_normal = im_normal.astype(np.uint8)
-    im_normal = im_normal[:, :, (2, 1, 0)]
-    im_normal = cv2.bilateralFilter(im_normal, 9, 75, 75)
-
-    im_orig = im_normal.astype(np.float32, copy=True)
-    im_orig -= cfg.PIXEL_MEANS
-
-    processed_ims_normal = []
-    im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale, interpolation=cv2.INTER_LINEAR)
-    processed_ims_normal.append(im)
-
-    # Create a blob to hold the input images
-    blob = im_list_to_blob(processed_ims, 3)
-    blob_rescale = im_list_to_blob(processed_ims_rescale, 3)
-    blob_depth = im_list_to_blob(processed_ims_depth, 3)
-    blob_normal = im_list_to_blob(processed_ims_normal, 3)
-
-    return blob, blob_rescale, blob_depth, blob_normal, np.array(im_scale_factors)
-
-
-######################
-# test single frame(?)
-######################
-def im_segment_single_frame(sess, net, im, im_depth, meta_data, num_classes):
-    """segment image
-    """
-
-    # compute image blob
-    im_blob, im_rescale_blob, im_depth_blob, im_normal_blob, im_scale_factors = _get_image_blob(im, im_depth, meta_data)
-
-    # use a fake label blob of ones
-    height = im_depth.shape[0]
-    width = im_depth.shape[1]
-    label_blob = np.ones((1, height, width, num_classes), dtype=np.float32)
-
-    if cfg.TEST.GAN:
-        gan_label_true_blob = np.zeros((1, height / 32, width / 32, 2), dtype=np.float32)
-        gan_label_false_blob = np.zeros((1, height / 32, width / 32, 2), dtype=np.float32)
-        gan_label_color_blob = np.zeros((num_classes, 3), dtype=np.float32)
-
-    # forward pass
-    if cfg.INPUT == 'RGBD':
-        data_blob = im_blob
-        data_p_blob = im_depth_blob
-    elif cfg.INPUT == 'COLOR':
-        data_blob = im_blob
-    elif cfg.INPUT == 'DEPTH':
-        data_blob = im_depth_blob
-    elif cfg.INPUT == 'NORMAL':
-        data_blob = im_normal_blob
-
-    if cfg.INPUT == 'RGBD':
-        if cfg.TEST.GAN:
-            feed_dict = {net.data: data_blob, net.data_p: data_p_blob, net.gt_label_2d: label_blob, net.keep_prob: 1.0, \
-                         net.gan_label_true: gan_label_true_blob, net.gan_label_false: gan_label_false_blob, net.gan_label_color: gan_label_color_blob}
-        else:
-            feed_dict = {net.data: data_blob, net.data_p: data_p_blob, net.gt_label_2d: label_blob, net.keep_prob: 1.0}
-    else:
-        if cfg.TEST.GAN:
-            feed_dict = {net.data: data_blob, net.gt_label_2d: label_blob, net.keep_prob: 1.0, \
-                         net.gan_label_true: gan_label_true_blob, net.gan_label_false: gan_label_false_blob, net.gan_label_color: gan_label_color_blob}
-        else:
-            feed_dict = {net.data: data_blob, net.gt_label_2d: label_blob, net.keep_prob: 1.0}
-
-    sess.run(net.enqueue_op, feed_dict=feed_dict)
-
-    if cfg.NETWORK == 'FCN8VGG':
-        labels_2d, probs = sess.run([net.label_2d, net.prob], feed_dict=feed_dict)
-    else:
-        if cfg.TEST.VERTEX_REG:
-            labels_2d, probs, vertex_pred = sess.run([net.get_output('label_2d'), net.get_output('prob_normalized'), net.get_output('vertex_pred')], feed_dict=feed_dict)
-        else:
-            labels_2d, probs = sess.run([net.get_output('label_2d'), net.get_output('prob_normalized')], feed_dict=feed_dict)
-            vertex_pred = []
-
-    return labels_2d[0,:,:].astype(np.uint8), probs[0,:,:,:], vertex_pred
-
-
-def im_segment(sess, net, im, im_depth, state, weights, points, meta_data, voxelizer, pose_world2live, pose_live2world):
-    """segment image
-    """
-
-    # compute image blob
-    im_blob, im_rescale_blob, im_depth_blob, im_normal_blob, im_scale_factors = _get_image_blob(im, im_depth, meta_data)
-
-    # depth
-    depth = im_depth.astype(np.float32, copy=True) / float(meta_data['factor_depth'])
-
-    # construct the meta data
-    """
-    format of the meta_data
-    intrinsic matrix: meta_data[0 ~ 8]
-    inverse intrinsic matrix: meta_data[9 ~ 17]
-    pose_world2live: meta_data[18 ~ 29]
-    pose_live2world: meta_data[30 ~ 41]
-    voxel step size: meta_data[42, 43, 44]
-    voxel min value: meta_data[45, 46, 47]
-    """
-    K = np.matrix(meta_data['intrinsic_matrix'])
-    Kinv = np.linalg.pinv(K)
-    mdata = np.zeros(48, dtype=np.float32)
-    mdata[0:9] = K.flatten()
-    mdata[9:18] = Kinv.flatten()
-    mdata[18:30] = pose_world2live.flatten()
-    mdata[30:42] = pose_live2world.flatten()
-    mdata[42] = voxelizer.step_x
-    mdata[43] = voxelizer.step_y
-    mdata[44] = voxelizer.step_z
-    mdata[45] = voxelizer.min_x
-    mdata[46] = voxelizer.min_y
-    mdata[47] = voxelizer.min_z
-    if cfg.FLIP_X:
-        mdata[0] = -1 * mdata[0]
-        mdata[9] = -1 * mdata[9]
-        mdata[11] = -1 * mdata[11]
-
-    # construct blobs
-    height = im_depth.shape[0]
-    width = im_depth.shape[1]
-    depth_blob = np.zeros((1, height, width, 1), dtype=np.float32)
-    meta_data_blob = np.zeros((1, 1, 1, 48), dtype=np.float32)
-    depth_blob[0,:,:,0] = depth
-    meta_data_blob[0,0,0,:] = mdata
-    # use a fake label blob of 1s
-    label_blob = np.ones((1, height, width, voxelizer.num_classes), dtype=np.float32)
-
-    # reshape the blobs
-    num_steps = 1
-    ims_per_batch = 1
-    height_blob = im_blob.shape[1]
-    width_blob = im_blob.shape[2]
-    im_blob = im_blob.reshape((num_steps, ims_per_batch, height_blob, width_blob, -1))
-    im_depth_blob = im_depth_blob.reshape((num_steps, ims_per_batch, height_blob, width_blob, -1))
-    im_normal_blob = im_normal_blob.reshape((num_steps, ims_per_batch, height_blob, width_blob, -1))
-
-    label_blob = label_blob.reshape((num_steps, ims_per_batch, height, width, -1))
-    depth_blob = depth_blob.reshape((num_steps, ims_per_batch, height, width, -1))
-    meta_data_blob = meta_data_blob.reshape((num_steps, ims_per_batch, 1, 1, -1))
-
-    # forward pass
-    if cfg.INPUT == 'RGBD':
-        data_blob = im_blob
-        data_p_blob = im_depth_blob
-    elif cfg.INPUT == 'COLOR':
-        data_blob = im_blob
-        data_p_blob = None
-    elif cfg.INPUT == 'DEPTH':
-        data_blob = im_depth_blob
-        data_p_blob = None
-    elif cfg.INPUT == 'NORMAL':
-        data_blob = im_normal_blob
-        data_p_blob = None
-    else:
-        data_blob = None
-        data_p_blob = None
-
-    if cfg.INPUT == 'RGBD':
-        feed_dict = {net.data: data_blob, net.data_p: data_p_blob, net.gt_label_2d: label_blob, net.state: state, net.weights: weights, net.depth: depth_blob, \
-                     net.meta_data: meta_data_blob, net.points: points, net.keep_prob: 1.0}
-    else:
-        feed_dict = {net.data: data_blob, net.gt_label_2d: label_blob, net.state: state, net.weights: weights, net.depth: depth_blob,
-                     net.meta_data: meta_data_blob, net.points: points, net.keep_prob: 1.0}
-
-    sess.run(net.enqueue_op, feed_dict=feed_dict)
-    labels_pred_2d, probs, state, weights, points = sess.run([net.get_output('labels_pred_2d'), net.get_output('probs'),
-        net.get_output('output_state'), net.get_output('output_weights'), net.get_output('output_points')], feed_dict=feed_dict)
-
-    labels_2d = labels_pred_2d[0]
-
-    return labels_2d[0,:,:].astype(np.uint8), probs[0][0,:,:,:], state, weights, points
-
-
-def vis_segmentations(im, im_depth, labels, labels_gt, colors):
-    """Visual debugging of detections."""
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    fig = plt.figure()
-
-    # show image
-    ax = fig.add_subplot(221)
-    im = im[:, :, (2, 1, 0)]
-    plt.imshow(im)
-    ax.set_title('input image')
-    ax.autoscale()
-
-    # show depth
-    ax = fig.add_subplot(222)
-    plt.imshow(im_depth)
-    ax.set_title('input depth')
-    ax.autoscale()
-
-    # show class label
-    ax = fig.add_subplot(223)
-    plt.imshow(labels)
-    ax.set_title('class labels')
-    ax.autoscale()
-
-    ax = fig.add_subplot(224)
-    plt.imshow(labels_gt)
-    ax.set_title('gt class labels')
-    ax.autoscale()
-
-    # show the 3D points
-    '''
-    from mpl_toolkits.mplot3d import Axes3D
-    ax = fig.add_subplot(224, projection='3d')
-    ax.set_aspect('equal')
-
-    points = points[0,:,:,:].reshape((-1, 3))
-
-    X = points[:,0]
-    Y = points[:,1]
-    Z = points[:,2]
-    index = np.where(np.isfinite(X))[0]
-    perm = np.random.permutation(np.arange(len(index)))
-    num = min(10000, len(index))
-    index = index[perm[:num]]
-    ax.scatter(X[index], Y[index], Z[index], c='r', marker='.')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    set_axes_equal(ax)
-    '''
-
-    fig.tight_layout()
-    plt.show()
+#output/lov_synthetic_features_drill_crackerbox/batch_size_4_loss_L2_optimizer_ADAM_network_net_labeled_concat_features_2017-08-06_2017-08-06_19-35-28_909447/vgg16_flow_lov_features_iter_9000.ckpt
+#output/lov_synthetic_features/batch_size_1_loss_L2_optimizer_ADAM_network_net_labeled_concat_features_2017-08-06_2017-08-06_19:35:48_853842/vgg16_flow_lov_features_iter_69000.ckpt
 
 
 ###################
@@ -343,7 +62,8 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
             os.makedirs(output_dir)
 
     np.random.seed(10)
-    roidb_ordering = np.random.permutation(np.arange(len(imdb.roidb)))
+    # roidb_ordering = np.random.permutation(np.arange(len(imdb.roidb)))
+    roidb_ordering = np.arange(len(imdb.roidb))
     if n_images is None:
         n_images = len(imdb.roidb)
     roidb_ordering = roidb_ordering[0:n_images]
@@ -356,7 +76,12 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
     else:
         data_layer = GtFlowDataLayer(imdb.roidb, None, single=True)
 
-    for i in range(n_images):
+    class_epe_set = {}
+
+    global image_index_pos
+    image_index_pos = -1
+    while image_index_pos < n_images - 1:
+        image_index_pos += 1
 
         # Get network outputs
         blobs = data_layer.forward()
@@ -370,7 +95,10 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         left_labels_blob = blobs['left_labels']
         right_labels_blob = blobs['right_labels']
 
-        index = roidb_ordering[i]
+        if calculate_EPE_all_data == True and blobs['roidb'][0]['video_id'] in class_epe_set and class_epe_set[blobs['roidb'][0]['video_id']][1] > 4:
+            continue
+
+        index = roidb_ordering[image_index_pos]
         images = imdb.roidb[index]
 
         network_inputs = {net.data_left: left_blob, net.data_right: right_blob, net.gt_flow: flow_blob,
@@ -389,25 +117,73 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         #                   net.labels_right: np.ones(list(right_blob.shape[:3]) + list([1]), dtype=np.int32),
         #                   net.keep_prob: 1.0}
 
+        # network_outputs = [net.get_output('features_1x_l'), net.get_output('features_1x_r'), net.get_output('gt_flow'),
+        #                    net.get_output('final_triplet_loss'), net.get_output('occluded'),
+        #                    net.get_output("features_4x_l"), net.get_output("features_4x_r"),
+        #                    net.get_output("occluded_4x")]
+
         network_outputs = [net.get_output('features_1x_l'), net.get_output('features_1x_r'), net.get_output('gt_flow'),
                            net.get_output('final_triplet_loss'), net.get_output('occluded'),
-                           net.get_output("features_4x_l"), net.get_output("features_4x_r"),
-                           net.get_output("occluded_4x")]
+                           net.get_output("features_2x_l"),  net.get_output("features_4x_l"), net.get_output("features_8x_l"),
+                           net.get_output("features_2x_r"), net.get_output("features_4x_r"), net.get_output("features_8x_r"),
+                           net.get_output("occluded_2x"), net.get_output("occluded_4x"), net.get_output("occluded_8x")]
         results = siphon_outputs_single_frame(sess, net, network_inputs, network_outputs)
 
+        features_l = results[0][0]
+        features_r = results[1][0]
+
+        # features_l = np.concatenate([
+        #                             scipy.ndimage.zoom(np.squeeze(results[7]), (8, 8, 1), order=1),
+        #                             # scipy.ndimage.zoom(np.squeeze(results[6]), (4, 4, 1), order=1),
+        #                             # scipy.ndimage.zoom(np.squeeze(results[5]), (2, 2, 1), order=1),
+        #                             np.squeeze(results[0])], axis=2)
+        #
+        # features_r = np.concatenate([
+        #                             scipy.ndimage.zoom(np.squeeze(results[10]), (8, 8, 1), order=1),
+        #                             # scipy.ndimage.zoom(np.squeeze(results[9]), (4, 4, 1), order=1),
+        #                             # scipy.ndimage.zoom(np.squeeze(results[8]), (2, 2, 1), order=1),
+        #                             np.squeeze(results[1])], axis=2)
+
         # non-Pyramidal flow calculation
-        left_pyramid = [np.squeeze(results[0])]
-        right_pyramid = [np.squeeze(results[1])]
+        left_pyramid = [features_l]
+        right_pyramid = [features_r]
         occluded_pyramid = [np.squeeze(results[4])]
-        predicted_flow, feature_errors, flow_arrays = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(left_pyramid, right_pyramid,
-                                           occluded_pyramid, neighborhood_len_import=250, interpolate_after=False)
+        # occluded_pyramid = [np.zeros(np.squeeze(results[4]).shape, dtype=np.int32)]
+        scale_factor = 2
+        search_radius = 400
+        left_pyramid_scaled = [scipy.ndimage.zoom(left_pyramid[0], [1./scale_factor, 1./scale_factor, 1], order=1)]
+        right_pyramid_scaled = [scipy.ndimage.zoom(right_pyramid[0], [1./scale_factor, 1./scale_factor, 1], order=1)]
+        occluded_pyramid_scaled = [scipy.ndimage.zoom(occluded_pyramid[0], [1./scale_factor, 1./scale_factor], order=1).astype(np.int32)]
+        predicted_flow, feature_errors, flow_arrays_unscaled = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(left_pyramid_scaled, right_pyramid_scaled,
+                                           occluded_pyramid_scaled, neighborhood_len_import=search_radius/scale_factor, interpolate_after=False)
+        predicted_flow = scipy.ndimage.zoom(predicted_flow, [scale_factor, scale_factor, 1], order=1) * scale_factor
+        feature_errors = scipy.ndimage.zoom(feature_errors, [scale_factor, scale_factor], order=1)
+        flow_arrays = list()
+        for flow_arr in flow_arrays_unscaled:
+            flow_arrays.append(scipy.ndimage.zoom(flow_arr, [scale_factor, scale_factor, 1], order=1) * scale_factor)
+
+        r_to_l_predicted_flow, _, _ = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(right_pyramid_scaled, left_pyramid_scaled,
+                                           occluded_pyramid_scaled, neighborhood_len_import=search_radius/scale_factor, interpolate_after=False)
+        r_to_l_predicted_flow_l_view = np.ones(r_to_l_predicted_flow.shape, dtype=np.float32)
+        for y in range(r_to_l_predicted_flow.shape[0]):
+            for x in range(r_to_l_predicted_flow.shape[1]):
+                orrigional_point_y = int(round(r_to_l_predicted_flow[int(y), int(x), 1])) + y
+                orrigional_point_x = int(round(r_to_l_predicted_flow[int(y), int(x), 0])) + x
+                if orrigional_point_x == x and orrigional_point_y == y:
+                    continue
+                if 0 <= orrigional_point_y < r_to_l_predicted_flow.shape[0] and 0 <= orrigional_point_x < r_to_l_predicted_flow.shape[1]:
+                    r_to_l_predicted_flow_l_view[orrigional_point_y, orrigional_point_x] = [x - orrigional_point_x, y - orrigional_point_y]
+
+        r_to_l_predicted_flow_l_view = scipy.ndimage.zoom(r_to_l_predicted_flow_l_view, [scale_factor, scale_factor, 1], order=1) * scale_factor
+
+        # flow_arrays = flow_arrays_unscaled
 
         # # Pyramidal flow calculation
-        # left_pyramid = (np.squeeze(results[5]), np.squeeze(results[0]))
-        # right_pyramid = (np.squeeze(results[6]), np.squeeze(results[1]))
-        # occluded_pyramid = (np.squeeze(results[7]), np.squeeze(results[4]))
+        # left_pyramid = (np.squeeze(results[7]), np.squeeze(results[6]), np.squeeze(results[5]), np.squeeze(results[0]))
+        # right_pyramid = (np.squeeze(results[10]), np.squeeze(results[9]), np.squeeze(results[8]), np.squeeze(results[1]))
+        # occluded_pyramid = (np.squeeze(results[13]), np.squeeze(results[12]), np.squeeze(results[11]), np.squeeze(results[4]))
         # predicted_flow, feature_errors, flow_arrays = triplet_flow_loss.run_slow_flow_calculator_process.get_flow_parallel_pyramid(left_pyramid, right_pyramid,
-        #                                    occluded_pyramid, neighborhood_len_import=300, interpolate_after=True)
+        #                                    occluded_pyramid, neighborhood_len_import=400, interpolate_after=True)
         # # predicted_flow = interpolate_flow(np.squeeze(results[0]), np.squeeze(results[1]), predicted_flow)
 
 
@@ -429,14 +205,21 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         # #                                    [np.squeeze(results[4])], neighborhood_len_import=200, interpolate_after=False)
 
         predicted_flow_cropped = predicted_flow[:gt_flow.shape[0], :gt_flow.shape[1]]
-        average_EPE = sintel_utils.calculate_EPE(gt_flow, predicted_flow_cropped)
-        zero_prediction_EPE = sintel_utils.calculate_EPE(gt_flow, np.zeros(gt_flow.shape))
+        gt_flow_cropped = gt_flow[:predicted_flow.shape[0], :predicted_flow.shape[1]]
+        average_EPE = sintel_utils.calculate_EPE(gt_flow_cropped, predicted_flow_cropped)
+        zero_prediction_EPE = sintel_utils.calculate_EPE(gt_flow_cropped, np.zeros(gt_flow_cropped.shape))
 
         if calculate_EPE_all_data:
             path_segments = str(images['image']).split("/")
-            print ("%3i / %i EPE is %7.4f for " % (i + 1, n_images, average_EPE)) + path_segments[-3] + "/" + path_segments[-2] + "/" + path_segments[-1]
+            print ("%3i / %i EPE is %7.4f for " % (image_index_pos + 1, n_images, average_EPE)) + path_segments[-3] + "/" + path_segments[-2] + "/" + path_segments[-1]
             print "\tcalculated triplet loss is %7.4f" % float(results[3][0])
             EPE_list.append(average_EPE)
+            try:
+                class_epe_set[blobs['roidb'][0]['video_id']][0] += average_EPE
+                class_epe_set[blobs['roidb'][0]['video_id']][1] += 1
+            except:
+                class_epe_set[blobs['roidb'][0]['video_id']] = list([average_EPE, 1])
+            print blobs['roidb'][0]['video_id'], class_epe_set[blobs['roidb'][0]['video_id']]
         else:
             global iiiiii, x_plots, y_plots, axes_left_list, axes_right_list, fig
             fig = plt.figure(figsize=(12.0, 9.0))
@@ -485,7 +268,7 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
 
             else:
                 x_plots = 4
-                y_plots = 3
+                y_plots = 4
 
                 # show left
                 im_left = fix_rgb_image(left_blob[0])
@@ -503,26 +286,26 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                 iiiiii += 1
                 axes_right_list.append(ax2)
 
-                # show right
-                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-                ax2.imshow(sintel_utils.sintel_compute_color(gt_flow))
-                ax2.set_title("flow)")
-                iiiiii += 1
-                axes_left_list.append(ax2)
+                # # show right
+                # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                # ax2.imshow(sintel_utils.sintel_compute_color(gt_flow))
+                # ax2.set_title("flow)")
+                # iiiiii += 1
+                # axes_left_list.append(ax2)
+                #
+                # # show right
+                # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                # ax2.imshow(sintel_utils.raw_color_from_flow(gt_flow))
+                # ax2.set_title("flow")
+                # iiiiii += 1
+                # axes_left_list.append(ax2)
 
-                # show right
-                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-                ax2.imshow(sintel_utils.raw_color_from_flow(gt_flow))
-                ax2.set_title("flow")
-                iiiiii += 1
-                axes_left_list.append(ax2)
-
-                # show right
-                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-                ax2.imshow(((np.squeeze(occluded_blob[0]) * -1 + 1)[:, :, np.newaxis] * im_left).astype(np.uint8))
-                ax2.set_title("occluded")
-                iiiiii += 1
-                axes_left_list.append(ax2)
+                # # show occluded
+                # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                # ax2.imshow(((np.squeeze(occluded_blob[0]) * -1 + 1)[:, :, np.newaxis] * im_left).astype(np.uint8))
+                # ax2.set_title("occluded")
+                # iiiiii += 1
+                # axes_left_list.append(ax2)
 
                 # # warped
                 # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
@@ -534,6 +317,22 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                 # average_diff = np.mean(np.abs(warped_blob[0].astype(np.float32) - right_blob[0])) * \
                 #                (np.product(right_blob[0].shape) / np.count_nonzero(warped_blob[0]))
 
+                # # create flow images, but don't display them yet
+                # gt_flow_color_square = sintel_utils.sintel_compute_color(gt_flow)
+                # gt_flow_raw_color = sintel_utils.raw_color_from_flow(gt_flow)
+                # gt_flow_plot_position = iiiiii
+                # iiiiii += 1
+                #
+                # computed_flows_plot_positions = list()
+                # computed_flows_color_square = list()
+                # computed_flows_raw_color = list()
+                # for i in range(len(flow_arrays)):
+                #     computed_flows_color_square.append(sintel_utils.sintel_compute_color(flow_arrays[i]))
+                #     computed_flows_raw_color.append(sintel_utils.raw_color_from_flow(flow_arrays[i]))
+                #     computed_flows_plot_positions.append(iiiiii)
+                #     iiiiii += 1
+
+
                 # create flow images, but don't display them yet
                 gt_flow_color_square = sintel_utils.sintel_compute_color(gt_flow)
                 gt_flow_raw_color = sintel_utils.raw_color_from_flow(gt_flow)
@@ -543,15 +342,31 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                 computed_flows_plot_positions = list()
                 computed_flows_color_square = list()
                 computed_flows_raw_color = list()
-                for i in range(len(flow_arrays)):
-                    computed_flows_color_square.append(sintel_utils.sintel_compute_color(flow_arrays[i]))
-                    computed_flows_raw_color.append(sintel_utils.raw_color_from_flow(flow_arrays[i]))
+
+                combined_im = sintel_utils.sintel_compute_color(np.concatenate([gt_flow, predicted_flow], axis=1))
+
+                gt_flow_raw_color = combined_im[:, :640, :]
+                pred_flow_im = combined_im[:, 640:, :]
+
+                computed_flows_color_square.append(pred_flow_im)
+                computed_flows_raw_color.append(sintel_utils.raw_color_from_flow(predicted_flow))
+                computed_flows_plot_positions.append(iiiiii)
+                iiiiii += 1
+
+                display_img(sintel_utils.sintel_compute_color(r_to_l_predicted_flow_l_view), "right to left flow")
+                display_img(np.sqrt(np.sum(np.power(r_to_l_predicted_flow_l_view - predicted_flow, 2), axis=2)), "right to left flow similarity")
+
+                for image_index_pos in range(len(flow_arrays) - 1):
+                    computed_flows_color_square.append(sintel_utils.sintel_compute_color(flow_arrays[image_index_pos]))
+                    computed_flows_raw_color.append(sintel_utils.raw_color_from_flow(flow_arrays[image_index_pos]))
                     computed_flows_plot_positions.append(iiiiii)
                     iiiiii += 1
 
-                gt_flow_ax = None
+                global gt_flow_ax
+                gt_flow_ax = fig.add_subplot(y_plots, x_plots, gt_flow_plot_position)
                 def plot_flow_images(color_square_not_raw):
-                    gt_flow_ax = fig.add_subplot(y_plots, x_plots, gt_flow_plot_position)
+                    global gt_flow_ax
+                    # gt_flow_ax = fig.add_subplot(y_plots, x_plots, gt_flow_plot_position)
                     # ax3.imshow(gt_flow_im)
                     if color_square_not_raw:
                         gt_flow_ax.imshow(gt_flow_color_square)
@@ -560,30 +375,56 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                     gt_flow_ax.set_title("gt flow")
                     axes_left_list.append(gt_flow_ax)
 
-                    for i in range(len(flow_arrays)):
-                        ax7 = fig.add_subplot(y_plots, x_plots, computed_flows_plot_positions[i])
+                    for ii in range(len(flow_arrays)):
+                        ax7 = fig.add_subplot(y_plots, x_plots, computed_flows_plot_positions[ii])
                         if color_square_not_raw:
-                            ax7.imshow(computed_flows_color_square[i])
+                            ax7.imshow(computed_flows_color_square[ii])
                         else:
-                            ax7.imshow(computed_flows_raw_color[i])
-                        ax7.set_title("raw predicted flow at scale " + str(i))
+                            ax7.imshow(computed_flows_raw_color[ii])
+                        ax7.set_title("raw predicted flow at scale " + str(ii))
                         axes_left_list.append(ax7)
 
-                plot_flow_images(False)
+                plot_flow_images(True)
 
-                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-                ax2.imshow(np.squeeze(depth_blob[0]))
-                ax2.set_title("depth")
-                iiiiii += 1
-                axes_left_list.append(ax2)
+                # # depth
+                # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                # ax2.imshow(np.squeeze(depth_blob[0]))
+                # ax2.set_title("depth")
+                # iiiiii += 1
+                # axes_left_list.append(ax2)
 
-                left_labels = (left_labels_blob[0] * np.arange(1, left_labels_blob[0].shape[2] + 1)).sum(axis=2)
-                right_labels = (right_labels_blob[0] * np.arange(1, right_labels_blob[0].shape[2] + 1)).sum(axis=2)
-                display_img(np.squeeze(left_labels), "left labels")
-                display_img(np.squeeze(right_labels), "right labels", right=True)
+                # left_labels = (left_labels_blob[0] * np.arange(1, left_labels_blob[0].shape[2] + 1)).sum(axis=2)
+                # right_labels = (right_labels_blob[0] * np.arange(1, right_labels_blob[0].shape[2] + 1)).sum(axis=2)
+                # display_img(np.squeeze(left_labels), "left labels")
+                # display_img(np.squeeze(right_labels), "right labels", right=True)
 
-                display_img(sintel_utils.colorize_features(results[0]), "left features", right=False)
-                display_img(sintel_utils.colorize_features(results[1]), "right features", right=True)
+                random_matrix = np.random.rand(features_l.shape[2], 3)
+                feature_ax_list = list()
+                feature_ax_list.append([np.squeeze(features_l), "left features", None, False])
+                feature_ax_list.append([np.squeeze(features_r), "right features", None, True])
+                feature_ax_list.append([np.squeeze(results[7]), "left features 8x", None, False])
+                feature_ax_list.append([np.squeeze(results[10]), "right features 8x", None, True])
+                feature_ax_list.append([np.squeeze(results[6]), "left features 4x", None, False])
+                feature_ax_list.append([np.squeeze(results[9]), "right features 4x", None, True])
+                feature_ax_list.append([np.squeeze(results[5]), "left features 2x", None, False])
+                feature_ax_list.append([np.squeeze(results[8]), "right features 2x", None, True])
+                # feature_ax_list.append([np.squeeze(results[0]), "left features 1x", None, False])
+                # feature_ax_list.append([np.squeeze(results[1]), "right features 1x", None, True])
+                for ii in range(len(feature_ax_list)):
+                    iii = feature_ax_list[ii]
+                    ax = display_img(sintel_utils.colorize_features(np.matmul(iii[0], random_matrix[:iii[0].shape[2], :])), iii[1], right=iii[3])
+                    feature_ax_list[ii] = [iii[0], iii[1], ax, iii[3]]
+
+
+                # neighboring feature differences
+                feature_similarity = np.zeros(features_l.shape[:2], dtype=np.float32)
+                radius = 4  # actually half the side length of the square used for sampling
+                stride = 2
+                for a in range(radius, feature_similarity.shape[0] - radius, stride):
+                    for b in range(radius, feature_similarity.shape[1] - radius, stride):
+                        feature_similarity[a : a + stride, b : b + stride] = np.average(np.abs(features_l[a - radius : a + radius, b - radius : b + radius] - features_l[a, b]))
+                display_img(feature_similarity, "neighboring feature difference (l1 distance)")
+
 
                 x_points = list()
                 y_points = list()
@@ -591,105 +432,114 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
                 y_points_right = list()
                 colors = list()
 
-                global red_point, green_point, blue_point
-                red_point = None
-                green_point = None
-                blue_point = None
+                point_list = list()
 
-                def onclick(event):
-                    print(
-                    'button', event.button, 'x=', event.x, 'y=', event.y, 'xdata=', event.xdata, 'ydata=', event.ydata)
-                    for ax in axes_left_list:
-                        data_transformer = ax.transData.inverted()
-                        x_left, y_left = data_transformer.transform([event.x, event.y])
-                        if -1 <= x_left <= im_left.shape[1] + 3 and -1 <= y_left <= im_left.shape[0] + 3:
-                            print("\t x transformed:", x_left, "y transformed:", y_left)
-                            if event.xdata is not None and event.ydata is not None:
-                                if occluded_blob[0][int(event.ydata), int(event.xdata)] != 1:
-                                    x_points_right.append(event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0]))
-                                    y_points_right.append(event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1]))
-                                    x_points.append(event.xdata)
-                                    y_points.append(event.ydata)
-                                    color = random.random()
+                def get_onclick(point_list):
+                    def onclick(event):
+                        print(
+                        'button', event.button, 'x=', event.x, 'y=', event.y, 'xdata=', event.xdata, 'ydata=', event.ydata)
+                        for ax in axes_left_list:
+                            data_transformer = ax.transData.inverted()
+                            x_left, y_left = data_transformer.transform([event.x, event.y])
+                            if -1 <= x_left <= im_left.shape[1] + 3 and -1 <= y_left <= im_left.shape[0] + 3:
+                                print("\t x transformed:", x_left, "y transformed:", y_left)
+                                if event.xdata is not None and event.ydata is not None:
+                                    if occluded_blob[0][int(event.ydata), int(event.xdata)] != 1 or True:
+                                        x_point = event.xdata / (np.max(ax.get_xlim()) + 0.5) * 640
+                                        y_point = event.ydata / (np.max(ax.get_ylim()) + 0.5) * 480
+                                        x_points_right.append(x_point + int(gt_flow[int(y_point), int(x_point), 0]))
+                                        y_points_right.append(y_point + int(gt_flow[int(y_point), int(x_point), 1]))
+                                        x_points.append(x_point)
+                                        y_points.append(y_point)
+                                        color = random.random()
 
-                                    l_feature = results[0][0, int(event.ydata), int(event.xdata)]
-                                    r_feature_gt = results[1][0, int(y_points_right[-1]), int(x_points_right[-1])]
-                                    r_feature_pred = results[1][0, int(event.ydata) + int(predicted_flow[int(event.ydata), int(event.xdata), 1]),
-                                                                int(event.xdata) + int(predicted_flow[int(event.ydata), int(event.xdata), 0])]
-                                    print "dist between gt l and r features is", np.sqrt(np.sum(np.power(l_feature - r_feature_gt, 2)))
-                                    print "dist between predicted l and r features is", np.sqrt(np.sum(np.power(l_feature - r_feature_pred, 2)))
+                                        try:
+                                            l_feature = results[0][0, int(y_point), int(x_point)]
+                                            r_feature_gt = results[1][0, int(y_points_right[-1]), int(x_points_right[-1])]
+                                            r_feature_pred = results[1][0, int(y_point) + int(predicted_flow[int(y_point), int(x_point), 1]),
+                                                                        int(x_point) + int(predicted_flow[int(y_point), int(x_point), 0])]
+                                            print "dist between gt l and r features is", np.sqrt(np.sum(np.power(l_feature - r_feature_gt, 2)))
+                                            print "dist between predicted l and r features is", np.sqrt(np.sum(np.power(l_feature - r_feature_pred, 2)))
+                                        except:
+                                            pass
 
-                                    for sub_ax in axes_left_list:
-                                        sub_ax.scatter([event.xdata], [event.ydata], c=[color], s=7, marker='1')
-                                    for sub_ax in axes_right_list:
-                                        global red_point, green_point, blue_point
+                                        for sub_ax in axes_left_list:
+                                            sub_ax.scatter([x_point / 640 * (np.max(sub_ax.get_xlim()) + 0.5)],
+                                                           [y_point / 480 * (np.max(sub_ax.get_ylim()) + 0.5)], c=[color], s=7, marker='1')
 
-                                        if blue_point is not None:
+                                        for ii in point_list:
                                             # blue_point.remove()
-                                            red_point.remove()
-                                            green_point.remove()
-                                        # blue_point = sub_ax.scatter([event.xdata], [event.ydata], c='BLUE', s=7, marker='p')
-                                        red_point = sub_ax.scatter([event.xdata + int(predicted_flow[int(event.ydata), int(event.xdata), 0])],
-                                                       [event.ydata + int(predicted_flow[int(event.ydata), int(event.xdata), 1])], c='RED', edgecolors='WHITE', s=8, marker='o')
-                                        green_point = sub_ax.scatter([event.xdata + int(gt_flow[int(event.ydata), int(event.xdata), 0])],
-                                                       [event.ydata + int(gt_flow[int(event.ydata), int(event.xdata), 1])], c='GREEN', s=5, marker='1')
-                                        # green_point = sub_ax.scatter(x_points_right, y_points_right, c=colors, s=4, marker='p')
-                                else:
-                                    print "Point occluded, not drawing"
-                                fig.canvas.draw()
-                            break
+                                            ii.remove()
+                                        while len(point_list) > 0:
+                                            point_list.pop()
+                                        for sub_ax in axes_right_list:
+                                            # blue_point = sub_ax.scatter([x_point], [y_point], c='BLUE', s=7, marker='p')
+                                            point_list.append(sub_ax.scatter([(x_point + int(predicted_flow[int(y_point), int(x_point), 0])) / 640 * (np.max(sub_ax.get_xlim()) + 0.5)],
+                                                           [(y_point + int(predicted_flow[int(y_point), int(x_point), 1])) / 640 * (np.max(sub_ax.get_xlim()) + 0.5)], c='RED', edgecolors='WHITE', s=8, marker='o'))
+                                            point_list.append(sub_ax.scatter([(x_point + int(gt_flow[int(y_point), int(x_point), 0])) / 640 * (np.max(sub_ax.get_xlim()) + 0.5)],
+                                                           [(y_point + int(gt_flow[int(y_point), int(x_point), 1])) / 640 * (np.max(sub_ax.get_xlim()) + 0.5)], c='GREEN', s=5, marker='1'))
+                                    else:
+                                        print "Point occluded, not drawing"
+                                    fig.canvas.draw()
+                                break
+                    return onclick
 
-                cid = fig.canvas.mpl_connect('button_press_event', onclick)
+                cid = fig.canvas.mpl_connect('button_press_event', get_onclick(point_list))
                 global triplets
                 triplets = None
 
-                def handle_key_press(event):
-                    if event.key == 'c':
-                        plot_flow_images(True)
-                    elif event.key == 'r':
-                        plot_flow_images(False)
-
-                    elif event.key == 'm':
-                        pass
-
-                    elif event.key == "y":
+                def get_handle_key_press(feature_ax_list):
+                    def handle_key_press(event):
                         global triplets
-                        string_arr = pyperclip.paste()
-                        tup = literal_eval(string_arr)
-                        triplets = np.array(tup)
-                        triplets = triplets.transpose()
+                        if event.key == 'c':
+                            plot_flow_images(True)
+                        elif event.key == 'r':
+                            plot_flow_images(False)
 
-                    elif event.key == "t":
-                        global triplets
+                        elif event.key == 'e':
+                            random_matrix = np.random.rand(features_l.shape[2], 3)
+                            for ii in feature_ax_list:
+                                display_img(sintel_utils.colorize_features(np.matmul(ii[0], random_matrix[:ii[0].shape[2], :])), ii[1], ax=ii[2], right=ii[3])
 
-                        try:
-                            x_a = triplets[0, 0] % 640
-                            y_a = triplets[0, 0] / 640
-                            x_p = triplets[1, 0] % 640
-                            y_p = triplets[1, 0] / 640
-                            x_n = triplets[2, 0] % 640
-                            y_n = triplets[2, 0] / 640
-                            print "x_a", x_a, "y_a", y_a, "x_p", x_p, "y_p", y_p, "x_n", x_n, "y_n", y_n
-                            for sub_ax in axes_left_list:
-                                sub_ax.scatter([x_a], [y_a], c="BLUE", s=6, marker='p')
-                                sub_ax.scatter([x_n], [y_n], c="RED", s=4, marker='p')
-                            for sub_ax in axes_right_list:
-                                sub_ax.scatter([x_p], [y_p], c="GREEN", s=4, marker='p')
-                            fig.canvas.draw()
+                        elif event.key == "y":
+                            string_arr = pyperclip.paste()
+                            tup = literal_eval(string_arr)
+                            triplets = np.array(tup)
+                            triplets = triplets.transpose()
 
-                            triplets = triplets[:, 1:]
-                            print triplets.shape[1], "points left"
-                        except:
-                            print "data must be loaded with l before it can be plotted"
+                        elif event.key == "t":
+                            try:
+                                x_a = triplets[0, 0] % 640
+                                y_a = triplets[0, 0] / 640
+                                x_p = triplets[1, 0] % 640
+                                y_p = triplets[1, 0] / 640
+                                x_n = triplets[2, 0] % 640
+                                y_n = triplets[2, 0] / 640
+                                print "x_a", x_a, "y_a", y_a, "x_p", x_p, "y_p", y_p, "x_n", x_n, "y_n", y_n
+                                for sub_ax in axes_left_list:
+                                    sub_ax.scatter([x_a], [y_a], c="BLUE", s=6, marker='p')
+                                    sub_ax.scatter([x_n], [y_n], c="RED", s=4, marker='p')
+                                for sub_ax in axes_right_list:
+                                    sub_ax.scatter([x_p], [y_p], c="GREEN", s=4, marker='p')
+                                fig.canvas.draw()
 
+                                triplets = triplets[:, 1:]
+                                print triplets.shape[1], "points left"
+                            except:
+                                print "data must be loaded with l before it can be plotted"
+                        elif event.key == "b":
+                            global image_index_pos
+                            image_index_pos =- 1
+                            print "stepped backwards in image set, image_index_pos now equals", image_index_pos
 
-                    else:
-                        print "key not tied to any action"
-                    # only redraw if something changed
-                    fig.canvas.draw()
+                        else:
+                            print "key not tied to any action"
+                        # only redraw if something changed
+                        fig.canvas.draw()
 
-                fig.canvas.mpl_connect('key_press_event', handle_key_press)
+                    return handle_key_press
 
+                fig.canvas.mpl_connect('key_press_event', get_handle_key_press(feature_ax_list))
 
             try:
                 fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image'].split("/")[-2:]) + "  right image: " +
@@ -704,7 +554,7 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
             plt.interactive(False)
             plt.subplots_adjust(left=0.05, bottom=0.05, right=0.95, top=0.9, wspace=0.1, hspace=0.2)
             if save_image:
-                plt.savefig("plot_" + str(training_iter) + "_" + str(i) + ".png")
+                plt.savefig("plot_" + str(training_iter) + "_" + str(image_index_pos) + ".png")
             else:
                 plt.show()
             plt.close('all')
@@ -712,18 +562,22 @@ def test_flow_net(sess, net, imdb, weights_filename, n_images=None, save_image=F
         average = np.mean(EPE_list)
         print "# average EPE is " + str(average) + " for entire " + str(imdb._name) + " dataset with network " + \
             str(weights_filename)
+        for video_id in class_epe_set:
+            print video_id, "has average EPE", class_epe_set[video_id][0] / class_epe_set[video_id][1]
 
 
-def display_img(img, title, right=False):
+def display_img(img, title, right=False, ax=None):
     global iiiiii, x_plots, y_plots, axes_left_list, axes_right_list, fig
-    ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-    ax2.imshow(img)
-    ax2.set_title(title)
-    iiiiii += 1
-    if right:
-        axes_right_list.append(ax2)
-    else:
-        axes_left_list.append(ax2)
+    if ax is None:
+        ax = fig.add_subplot(y_plots, x_plots, iiiiii)
+        iiiiii += 1
+        if right:
+            axes_right_list.append(ax)
+        else:
+            axes_left_list.append(ax)
+    ax.imshow(img)
+    ax.set_title(title)
+    return ax
 
 
 def fix_rgb_image(image_in):
@@ -851,639 +705,3 @@ def _get_flow_image_blob(im_left, im_right, scale_ind):
     blob_rescale = []
 
     return image_left_blob, image_right_blob, im_scales
-
-
-##################
-# test video
-##################
-def test_net(sess, net, imdb, weights_filename, rig_filename, is_kfusion):
-
-    output_dir = get_output_dir(imdb, weights_filename)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    seg_file = os.path.join(output_dir, 'segmentations.pkl')
-    print imdb.name
-    if os.path.exists(seg_file):
-        with open(seg_file, 'rb') as fid:
-            segmentations = cPickle.load(fid)
-        imdb.evaluate_segmentations(segmentations, output_dir)
-        return
-
-    """Test a FCN on an image database."""
-    num_images = len(imdb.image_index)
-    segmentations = [[] for _ in xrange(num_images)]
-
-    # timers
-    _t = {'im_segment' : Timer(), 'misc' : Timer()}
-
-    # voxelizer
-    voxelizer = Voxelizer(cfg.TEST.GRID_SIZE, imdb.num_classes)
-    voxelizer.setup(-3, -3, -3, 3, 3, 4)
-    # voxelizer.setup(-2, -2, -2, 2, 2, 2)
-
-    # kinect fusion
-    if is_kfusion:
-        KF = kfusion.PyKinectFusion(rig_filename)
-
-    # construct colors
-    colors = np.zeros((3 * imdb.num_classes), dtype=np.uint8)
-    for i in range(imdb.num_classes):
-        colors[i * 3 + 0] = imdb._class_colors[i][0]
-        colors[i * 3 + 1] = imdb._class_colors[i][1]
-        colors[i * 3 + 2] = imdb._class_colors[i][2]
-
-    if cfg.TEST.VISUALIZE:
-        perm = np.random.permutation(np.arange(num_images))
-    else:
-        perm = xrange(num_images)
-
-    video_index = ''
-    have_prediction = False
-    for i in perm:
-        rgba = pad_im(cv2.imread(imdb.image_path_at(i), cv2.IMREAD_UNCHANGED), 16)
-        height = rgba.shape[0]
-        width = rgba.shape[1]
-
-        # parse image name
-        image_index = imdb.image_index[i]
-        pos = image_index.find('/')
-        if video_index == '':
-            video_index = image_index[:pos]
-            have_prediction = False
-            state = np.zeros((1, height, width, cfg.TRAIN.NUM_UNITS), dtype=np.float32)
-            weights = np.ones((1, height, width, cfg.TRAIN.NUM_UNITS), dtype=np.float32)
-            points = np.zeros((1, height, width, 3), dtype=np.float32)
-        else:
-            if video_index != image_index[:pos]:
-                have_prediction = False
-                video_index = image_index[:pos]
-                state = np.zeros((1, height, width, cfg.TRAIN.NUM_UNITS), dtype=np.float32)
-                weights = np.ones((1, height, width, cfg.TRAIN.NUM_UNITS), dtype=np.float32)
-                points = np.zeros((1, height, width, 3), dtype=np.float32)
-                print 'start video {}'.format(video_index)
-
-        # read color image
-        if rgba.shape[2] == 4:
-            im = np.copy(rgba[:,:,:3])
-            alpha = rgba[:,:,3]
-            I = np.where(alpha == 0)
-            im[I[0], I[1], :] = 0
-        else:
-            im = rgba
-
-        # read depth image
-        im_depth = pad_im(cv2.imread(imdb.depth_path_at(i), cv2.IMREAD_UNCHANGED), 16)
-
-        # load meta data
-        meta_data = scipy.io.loadmat(imdb.metadata_path_at(i))
-
-        # backprojection for the first frame
-        if not have_prediction:    
-            if is_kfusion:
-                # KF.set_voxel_grid(-3, -3, -3, 6, 6, 7)
-                KF.set_voxel_grid(voxelizer.min_x, voxelizer.min_y, voxelizer.min_z, voxelizer.max_x-voxelizer.min_x, voxelizer.max_y-voxelizer.min_y, voxelizer.max_z-voxelizer.min_z)
-                # identity transformation
-                RT_world = np.zeros((3,4), dtype=np.float32)
-                RT_world[0, 0] = 1
-                RT_world[1, 1] = 1
-                RT_world[2, 2] = 1
-            else:
-                # store the RT for the first frame
-                RT_world = meta_data['rotation_translation_matrix']
-
-        # run kinect fusion
-        if is_kfusion:
-            im_rgb = np.copy(im)
-            im_rgb[:, :, 0] = im[:, :, 2]
-            im_rgb[:, :, 2] = im[:, :, 0]
-            KF.feed_data(im_depth, im_rgb, im.shape[1], im.shape[0], float(meta_data['factor_depth']))
-            KF.back_project();
-            if have_prediction:
-                pose_world2live, pose_live2world = KF.solve_pose()
-                RT_live = pose_world2live
-            else:
-                RT_live = RT_world
-        else:
-            # compute camera poses
-            RT_live = meta_data['rotation_translation_matrix']
-
-        pose_world2live = se3_mul(RT_live, se3_inverse(RT_world))
-        pose_live2world = se3_inverse(pose_world2live)
-
-        _t['im_segment'].tic()
-        labels, probs, state, weights, points = im_segment(sess, net, im, im_depth, state, weights, points, meta_data, voxelizer, pose_world2live, pose_live2world)
-        _t['im_segment'].toc()
-        # time.sleep(3)
-
-        _t['misc'].tic()
-        labels = unpad_im(labels, 16)
-
-        # build the label image
-        im_label = imdb.labels_to_image(im, labels)
-
-        if is_kfusion:
-            labels_kfusion = np.zeros((height, width), dtype=np.int32)
-            if probs.shape[2] < 10:
-                probs_new = np.zeros((probs.shape[0], probs.shape[1], 10), dtype=np.float32)
-                probs_new[:,:,:imdb.num_classes] = probs
-                probs = probs_new
-            KF.feed_label(im_label, probs, colors)
-            KF.fuse_depth()
-            labels_kfusion = KF.extract_surface(labels_kfusion)
-            im_label_kfusion = imdb.labels_to_image(im, labels_kfusion)
-            KF.render()
-            filename = os.path.join(output_dir, 'images', '{:04d}'.format(i))
-            KF.draw(filename, 1)
-        have_prediction = True
-
-        # compute the delta transformation between frames
-        RT_world = RT_live
-
-        if is_kfusion:
-            seg = {'labels': labels_kfusion}
-        else:
-            seg = {'labels': labels}
-        segmentations[i] = seg
-
-        _t['misc'].toc()
-
-        if cfg.TEST.VISUALIZE:
-            # read label image
-            labels_gt = pad_im(cv2.imread(imdb.label_path_at(i), cv2.IMREAD_UNCHANGED), 16)
-            if len(labels_gt.shape) == 2:
-                im_label_gt = imdb.labels_to_image(im, labels_gt)
-            else:
-                im_label_gt = np.copy(labels_gt[:,:,:3])
-                im_label_gt[:,:,0] = labels_gt[:,:,2]
-                im_label_gt[:,:,2] = labels_gt[:,:,0]
-            vis_segmentations(im, im_depth, im_label, im_label_gt, imdb._class_colors)
-
-        print 'im_segment: {:d}/{:d} {:.3f}s {:.3f}s' \
-              .format(i + 1, num_images, _t['im_segment'].diff, _t['misc'].diff)
-
-    if is_kfusion:
-        KF.draw(filename, 1)
-
-    seg_file = os.path.join(output_dir, 'segmentations.pkl')
-    with open(seg_file, 'wb') as f:
-        cPickle.dump(segmentations, f, cPickle.HIGHEST_PROTOCOL)
-
-    # evaluation
-    imdb.evaluate_segmentations(segmentations, output_dir)
-
-# compute the voting label image in 2D
-def _vote_centers(im_label, cls_indexes, centers, num_classes):
-    width = im_label.shape[1]
-    height = im_label.shape[0]
-    vertex_targets = np.zeros((height, width, 3), dtype=np.float32)
-
-    center = np.zeros((2, 1), dtype=np.float32)
-    for i in xrange(1, num_classes):
-        y, x = np.where(im_label == i)
-        if len(x) > 0:
-            ind = np.where(cls_indexes == i)[0]
-            center[0] = centers[ind, 0]
-            center[1] = centers[ind, 1]
-            R = np.tile(center, (1, len(x))) - np.vstack((x, y))
-            # compute the norm
-            N = np.linalg.norm(R, axis=0) + 1e-10
-            # normalization
-            R = np.divide(R, np.tile(N, (2,1)))
-            # assignment
-            vertex_targets[y, x, 0] = R[0,:]
-            vertex_targets[y, x, 1] = R[1,:]
-
-    return vertex_targets
-
-
-# extract vertmap for vertex predication
-def _extract_vertmap(im_label, vertex_pred, extents, num_classes):
-    height = im_label.shape[0]
-    width = im_label.shape[1]
-    vertmap = np.zeros((height, width, 2), dtype=np.float32)
-    # centermap = np.zeros((height, width, 3), dtype=np.float32)
-
-    for i in xrange(1, num_classes):
-        I = np.where(im_label == i)
-        if len(I[0]) > 0:
-            start = 2 * i
-            end = 2 * i + 2
-            vertmap[I[0], I[1], :] = vertex_pred[0, I[0], I[1], start:end]
-
-            # start = 2 * i
-            # end = 2 * i + 2
-            # centermap[I[0], I[1], :2] = vertex_pred[0, I[0], I[1], start:end]
-
-    return vertmap
-    #return _unscale_vertmap(vertmap, im_label, extents, num_classes)
-    #return vertmap, centermap  
-
-
-def scale_vertmap(vertmap):
-    vmin = vertmap.min()
-    vmax = vertmap.max()
-    if vmax - vmin > 0:
-        a = 1.0 / (vmax - vmin)
-        b = -1.0 * vmin / (vmax - vmin)
-    else:
-        a = 0
-        b = 0
-    return a * vertmap + b
-
-
-def _unscale_vertmap(vertmap, labels, extents, num_classes):
-    for k in range(1, num_classes):
-        index = np.where(labels == k)
-        for i in range(3):
-            vmin = -extents[k, i] / 2
-            vmax = extents[k, i] / 2
-            a = 1.0 / (vmax - vmin)
-            b = -1.0 * vmin / (vmax - vmin)
-            vertmap[index[0], index[1], i] = (vertmap[index[0], index[1], i] - b) / a
-    return vertmap
-
-
-def vis_segmentations_vertmaps(im, im_depth, im_labels, im_labels_gt, colors, vertmap_gt, vertmap, labels, labels_gt, centers, intrinsic_matrix):
-    """Visual debugging of detections."""
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    fig = plt.figure()
-
-    # show image
-    ax = fig.add_subplot(241)
-    im = im[:, :, (2, 1, 0)]
-    plt.imshow(im)
-    ax.set_title('input image')
-    ax.autoscale()
-
-    # show gt class labels
-    ax = fig.add_subplot(242)
-    plt.imshow(im_labels_gt)
-    ax.set_title('gt class labels')
-    ax.autoscale()
-
-    # show depth
-    ax = fig.add_subplot(245)
-    plt.imshow(im_depth)
-    ax.set_title('input depth')
-    ax.autoscale()
-
-    # show gt vertex map
-    ax = fig.add_subplot(243)
-    plt.imshow(vertmap_gt[:,:,0])
-    ax.set_title('gt centers x')
-    ax.autoscale()
-
-    ax = fig.add_subplot(244)
-    plt.imshow(vertmap_gt[:,:,1])
-    ax.set_title('gt centers y')
-    ax.autoscale()
-
-    # show class label
-    ax = fig.add_subplot(246)
-    plt.imshow(im_labels)
-    ax.set_title('class labels')
-    ax.autoscale()
-
-    # show centers
-    index = np.where(np.isfinite(centers[:, 0]))[0]
-    plt.plot(centers[index, 0], centers[index, 1], 'ro')
-
-    # show boxes
-    for i in xrange(len(index)):
-        roi = centers[index[i], :]
-        plt.gca().add_patch(
-            plt.Rectangle((roi[0] - roi[2]/2, roi[1] - roi[3]/2), roi[2],
-                          roi[3], fill=False,
-                          edgecolor='g', linewidth=3)
-            )
-
-    # show vertex map
-    ax = fig.add_subplot(247)
-    plt.imshow(vertmap[:,:,0])
-    ax.set_title('centers x')
-    ax.autoscale()
-
-    ax = fig.add_subplot(248)
-    plt.imshow(vertmap[:,:,1])
-    ax.set_title('centers y')
-    ax.autoscale()
-
-    # show projection of the poses
-    if cfg.TEST.RANSAC:
-        ax = fig.add_subplot(234, aspect='equal')
-        plt.imshow(im)
-        ax.invert_yaxis()
-        num_classes = poses.shape[2]
-        for i in xrange(1, num_classes):
-            index = np.where(labels_gt == i)
-            if len(index[0]) > 0:
-                if np.isinf(poses[0, 0, i]):
-                    print 'missed object {}'.format(i)
-                else:
-                    # projection
-                    RT = poses[:, :, i]
-                    print RT
-
-                    num = len(index[0])
-                    # extract 3D points
-                    x3d = np.ones((4, num), dtype=np.float32)
-                    x3d[0, :] = vertmap_gt[index[0], index[1], 0] / cfg.TRAIN.VERTEX_W
-                    x3d[1, :] = vertmap_gt[index[0], index[1], 1] / cfg.TRAIN.VERTEX_W
-                    x3d[2, :] = vertmap_gt[index[0], index[1], 2] / cfg.TRAIN.VERTEX_W
-
-                    x2d = np.matmul(intrinsic_matrix, np.matmul(RT, x3d))
-                    x2d[0, :] = np.divide(x2d[0, :], x2d[2, :])
-                    x2d[1, :] = np.divide(x2d[1, :], x2d[2, :])
-                
-                    plt.plot(x2d[0, :], x2d[1, :], '.', color=np.divide(colors[i], 255.0), alpha=0.05)
-        ax.set_title('projection')
-        ax.invert_yaxis()
-        ax.set_xlim([0, im.shape[1]])
-        ax.set_ylim([im.shape[0], 0])
-
-    plt.tight_layout()
-    plt.show()
-
-
-###################
-# test single frame
-###################
-def test_net_single_frame(sess, net, imdb, weights_filename, rig_filename, is_kfusion):
-
-    output_dir = get_output_dir(imdb, weights_filename)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    seg_file = os.path.join(output_dir, 'segmentations.pkl')
-    print imdb.name
-    if os.path.exists(seg_file):
-        with open(seg_file, 'rb') as fid:
-            segmentations = cPickle.load(fid)
-        imdb.evaluate_segmentations(segmentations, output_dir)
-        return
-
-    """Test a FCN on an image database."""
-    num_images = len(imdb.image_index)
-    segmentations = [[] for _ in xrange(num_images)]
-
-    # timers
-    _t = {'im_segment' : Timer(), 'misc' : Timer()}
-
-    # kinect fusion
-    if is_kfusion:
-        KF = kfusion.PyKinectFusion(rig_filename)
-
-    # pose estimation
-    if cfg.TEST.VERTEX_REG:
-        RANSAC = ransac.PyRansac3D()
-
-    # construct colors
-    colors = np.zeros((3 * imdb.num_classes), dtype=np.uint8)
-    for i in range(imdb.num_classes):
-        colors[i * 3 + 0] = imdb._class_colors[i][0]
-        colors[i * 3 + 1] = imdb._class_colors[i][1]
-        colors[i * 3 + 2] = imdb._class_colors[i][2]
-
-    if cfg.TEST.VISUALIZE:
-        perm = np.random.permutation(np.arange(num_images))
-        # perm = xrange(0, num_images, 5)
-    else:
-        perm = xrange(num_images)
-
-    video_index = ''
-    have_prediction = False
-    for i in perm:
-
-        # parse image name
-        image_index = imdb.image_index[i]
-        pos = image_index.find('/')
-        if video_index == '':
-            video_index = image_index[:pos]
-            have_prediction = False
-        else:
-            if video_index != image_index[:pos]:
-                have_prediction = False
-                video_index = image_index[:pos]
-                print 'start video {}'.format(video_index)
-
-        # read color image
-        rgba = pad_im(cv2.imread(imdb.image_path_at(i), cv2.IMREAD_UNCHANGED), 16)
-        if rgba.shape[2] == 4:
-            im = np.copy(rgba[:,:,:3])
-            alpha = rgba[:,:,3]
-            I = np.where(alpha == 0)
-            im[I[0], I[1], :] = 0
-        else:
-            im = rgba
-
-        # read depth image
-        im_depth = pad_im(cv2.imread(imdb.depth_path_at(i), cv2.IMREAD_UNCHANGED), 16)
-
-        # load meta data
-        meta_data = scipy.io.loadmat(imdb.metadata_path_at(i))
-
-        # read label image
-        labels_gt = pad_im(cv2.imread(imdb.label_path_at(i), cv2.IMREAD_UNCHANGED), 16)
-        if len(labels_gt.shape) == 2:
-            im_label_gt = imdb.labels_to_image(im, labels_gt)
-        else:
-            im_label_gt = np.copy(labels_gt[:,:,:3])
-            im_label_gt[:,:,0] = labels_gt[:,:,2]
-            im_label_gt[:,:,2] = labels_gt[:,:,0]
-
-        _t['im_segment'].tic()
-        labels, probs, vertex_pred = im_segment_single_frame(sess, net, im, im_depth, meta_data, imdb.num_classes)
-        if cfg.TEST.VERTEX_REG:
-            vertmap = _extract_vertmap(labels, vertex_pred, imdb._extents, imdb.num_classes)
-            centers = RANSAC.estimate_center(probs, vertex_pred[0,:,:,:])
-            print centers
-            if cfg.TEST.RANSAC:
-                # pose estimation using RANSAC
-                fx = meta_data['intrinsic_matrix'][0, 0]
-                fy = meta_data['intrinsic_matrix'][1, 1]
-                px = meta_data['intrinsic_matrix'][0, 2]
-                py = meta_data['intrinsic_matrix'][1, 2]
-                depth_factor = meta_data['factor_depth'][0, 0]
-                poses = RANSAC.estimate_pose(im_depth, probs, vertex_pred[0,:,:,:] / cfg.TRAIN.VERTEX_W, imdb._extents, fx, fy, px, py, depth_factor)
-
-                # print gt poses
-                # cls_indexes = meta_data['cls_indexes']
-                # poses_gt = meta_data['poses']
-                # for j in xrange(len(cls_indexes)):
-                #    print 'object {}'.format(cls_indexes[j])
-                #    print poses_gt[:,:,j]
-            else:
-                poses = []
-
-        _t['im_segment'].toc()
-
-        _t['misc'].tic()
-        labels = unpad_im(labels, 16)
-        # build the label image
-        im_label = imdb.labels_to_image(im, labels)
-
-        if not have_prediction:    
-            if is_kfusion:
-                KF.set_voxel_grid(-3, -3, -3, 6, 6, 7)
-
-        # run kinect fusion
-        if is_kfusion:
-            height = im.shape[0]
-            width = im.shape[1]
-            labels_kfusion = np.zeros((height, width), dtype=np.int32)
-
-            im_rgb = np.copy(im)
-            im_rgb[:, :, 0] = im[:, :, 2]
-            im_rgb[:, :, 2] = im[:, :, 0]
-            KF.feed_data(im_depth, im_rgb, im.shape[1], im.shape[0], float(meta_data['factor_depth']))
-            KF.back_project();
-            if have_prediction:
-                pose_world2live, pose_live2world = KF.solve_pose()
-
-            KF.feed_label(im_label, probs, colors)
-            KF.fuse_depth()
-            labels_kfusion = KF.extract_surface(labels_kfusion)
-            im_label_kfusion = imdb.labels_to_image(im, labels_kfusion)
-            KF.render()
-            filename = os.path.join(output_dir, 'images', '{:04d}'.format(i))
-            KF.draw(filename, 0)
-        have_prediction = True
-
-        if is_kfusion:
-            seg = {'labels': labels_kfusion}
-        else:
-            seg = {'labels': labels}
-        segmentations[i] = seg
-
-        _t['misc'].toc()
-
-        print 'im_segment {}: {:d}/{:d} {:.3f}s {:.3f}s' \
-              .format(video_index, i + 1, num_images, _t['im_segment'].diff, _t['misc'].diff)
-
-        if cfg.TEST.VISUALIZE:
-            if cfg.TEST.VERTEX_REG:
-                centers_gt = _vote_centers(labels_gt, meta_data['cls_indexes'], meta_data['center'], imdb.num_classes)
-                print 'visualization'
-                vis_segmentations_vertmaps(im, im_depth, im_label, im_label_gt, imdb._class_colors, \
-                    centers_gt, vertmap, labels, labels_gt, centers, meta_data['intrinsic_matrix'])
-            else:
-                vis_segmentations(im, im_depth, im_label, im_label_gt, imdb._class_colors)
-
-    seg_file = os.path.join(output_dir, 'segmentations.pkl')
-    with open(seg_file, 'wb') as f:
-        cPickle.dump(segmentations, f, cPickle.HIGHEST_PROTOCOL)
-
-    # evaluation
-    imdb.evaluate_segmentations(segmentations, output_dir)
-
-
-
-###################
-# test GAN
-###################
-
-def vis_gan(im, im_depth, vertmap, vertmap_gt):
-
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-
-    # show image
-    ax = fig.add_subplot(221)
-    im = im[:, :, (2, 1, 0)]
-    plt.imshow(im)
-    ax.set_title('input image')
-
-    # show depth
-    ax = fig.add_subplot(222)
-    plt.imshow(im_depth)
-    ax.set_title('input depth')
-
-    # show class label
-    ax = fig.add_subplot(223)
-    plt.imshow(vertmap)
-    ax.set_title('vertmap')
-
-    ax = fig.add_subplot(224)
-    plt.imshow(vertmap_gt)
-    ax.set_title('gt vertmap')
-
-    plt.show()
-
-
-def test_gan(sess, net, imdb, weights_filename):
-
-    output_dir = get_output_dir(imdb, weights_filename)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    """Test a GAN on an image database."""
-    num_images = len(imdb.image_index)
-    segmentations = [[] for _ in xrange(num_images)]
-
-    # timers
-    _t = {'im_segment' : Timer(), 'misc' : Timer()}
-
-    if cfg.TEST.VISUALIZE:
-        perm = np.random.permutation(np.arange(num_images))
-    else:
-        perm = xrange(num_images)
-
-    for i in perm:
-
-        # read color image
-        rgba = pad_im(cv2.imread(imdb.image_path_at(i), cv2.IMREAD_UNCHANGED), 16)
-        if rgba.shape[2] == 4:
-            im = np.copy(rgba[:,:,:3])
-            alpha = rgba[:,:,3]
-            I = np.where(alpha == 0)
-            im[I[0], I[1], :] = 0
-        else:
-            im = rgba
-
-        # read depth image
-        im_depth = pad_im(cv2.imread(imdb.depth_path_at(i), cv2.IMREAD_UNCHANGED), 16)
-
-        # load meta data
-        meta_data = scipy.io.loadmat(imdb.metadata_path_at(i))
-
-        _t['im_segment'].tic()
-
-        im_blob, im_rescale_blob, im_depth_blob, im_normal_blob, im_scale_factors = _get_image_blob(im, im_depth, meta_data)
-
-        height = im.shape[0]
-        width = im.shape[1]
-        vertex_image_blob = np.zeros((1, height, width, 3), dtype=np.float32)
-        vertmap = pad_im(cv2.imread(imdb.vertmap_path_at(i), cv2.IMREAD_UNCHANGED), 16)
-        vertex_image_blob[0, :, :, :] = vertmap.astype(np.float32) / 127.5 - 1
-
-        gan_z_blob = np.random.uniform(-1, 1, [1, 100]).astype(np.float32)
-
-        feed_dict = {net.data: im_rescale_blob, net.data_gt: vertex_image_blob, net.z: gan_z_blob, net.keep_prob: 1.0}
-
-        sess.run(net.enqueue_op, feed_dict=feed_dict)
-        output_g = sess.run([net.get_output('output_g')], feed_dict=feed_dict)
-        labels = output_g[0][0,:,:,:]
-        labels = (labels + 1) * 127.5
-        print labels.shape
-
-        _t['im_segment'].toc()
-
-        _t['misc'].tic()
-        labels = unpad_im(labels, 16)
-
-        seg = {'labels': labels}
-        segmentations[i] = seg
-
-        _t['misc'].toc()
-
-        print 'im_segment: {:d}/{:d} {:.3f}s {:.3f}s' \
-              .format(i + 1, num_images, _t['im_segment'].diff, _t['misc'].diff)
-
-        if cfg.TEST.VISUALIZE:
-            vis_gan(im, im_depth, labels, vertmap)
-
-    seg_file = os.path.join(output_dir, 'segmentations.pkl')
-    with open(seg_file, 'wb') as f:
-        cPickle.dump(segmentations, f, cPickle.HIGHEST_PROTOCOL)

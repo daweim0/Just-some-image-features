@@ -247,11 +247,11 @@ class Network(object):
     #     return triplet_loss_op.triplet_loss(input[0], input[1], tf.cast(input[2], tf.int32), margin, name=name)
 
     @layer
-    def triplet_flow_loss(self, input, margin, negative_radius, name):
+    def triplet_flow_loss(self, input, margin, negative_radius, name, positive_radius=1):
         output = triplet_flow_loss_op.triplet_flow_loss(self.get_output(input[0]), self.get_output(input[1]),
                                                       self.get_output(input[2]), self.get_output(input[3]),
                                                         self.get_output(input[4]), self.get_output(input[5]),
-                                                        margin, negative_radius, name=name)
+                                                        margin, positive_radius, negative_radius, name=name)
         return output
 
     @layer

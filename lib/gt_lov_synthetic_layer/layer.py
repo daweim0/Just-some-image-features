@@ -39,7 +39,7 @@ class GtLOVSyntheticLayer(object):
 
     def _get_next_minibatch_inds(self):
         """Return the roidb indices for the next minibatch."""
-        if self._cur + self._imgs_per_batch >= len(self._roidb):
+        if self._cur + self._imgs_per_batch > len(self._roidb):
             self._shuffle_roidb_inds()
 
         db_inds = self._perm[self._cur:self._cur + self._imgs_per_batch]

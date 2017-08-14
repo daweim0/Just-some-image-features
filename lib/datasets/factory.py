@@ -19,6 +19,7 @@ import datasets.linemod_ape
 import datasets.sintel_albedo
 import datasets.sintel_clean
 import numpy as np
+from fcn.config import cfg
 
 # # shapenet dataset
 # for split in ['train', 'val']:
@@ -55,7 +56,7 @@ for split in ['train', 'val']:
             datasets.lov(split))
 
 # lov synthetic dataset
-for split in ['train', 'val', 'test']:
+for split in ['train', 'val', 'test', 'experimentation']:
     name = 'lov_synthetic_{}'.format(split)
     print name
     __sets[name] = (lambda split=split:
@@ -86,7 +87,11 @@ for split in ['train', 'val']:
 def get_imdb(name):
     """Get an imdb (image database) by name."""
     if not __sets.has_key(name):
-        raise KeyError('Unknown dataset: {}'.format(name))
+        if not __sets.has_key(name.split("-")[0]):
+            raise KeyError('Unknown dataset: {}'.format(name))
+        else:
+            cfg.SET_VARIANT=name.split("-")[1]
+            return __sets[name.split("-")[0]]()
     return __sets[name]()
 
 def list_imdbs():

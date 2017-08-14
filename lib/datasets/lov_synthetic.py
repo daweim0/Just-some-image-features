@@ -20,7 +20,31 @@ class lov_synthetic(datasets.imdb):
                          '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', '011_banana', '019_pitcher_base', \
                          '021_bleach_cleanser', '024_bowl', '025_mug', '035_power_drill', '036_wood_block', '037_scissors', '040_large_marker', \
                          '051_large_clamp', '052_extra_large_clamp', '061_foam_brick')
-        self._blacklist = {'007_tuna_fish_can', '011_banana', '019_pitcher_base', '024_bowl', '025_mug', '036_wood_block', '037_scissors', '051_large_clamp', '052_extra_large_clamp', '061_foam_brick'}
+
+        self._blacklist = {}
+
+        # # only train on cracker box
+        # self._blacklist = {'002_master_chef_can', '004_sugar_box', '005_tomato_soup_can', '006_mustard_bottle', \
+        #                  '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', '011_banana', '019_pitcher_base', \
+        #                  '021_bleach_cleanser', '024_bowl', '025_mug', '035_power_drill', '036_wood_block', '037_scissors', '040_large_marker', \
+        #                  '051_large_clamp', '052_extra_large_clamp', '061_foam_brick'}
+
+        # # only train on the drill and cracker box
+        # self._blacklist = {'002_master_chef_can', '004_sugar_box', '005_tomato_soup_can', '006_mustard_bottle', \
+        #                  '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', '011_banana', '019_pitcher_base', \
+        #                  '021_bleach_cleanser', '024_bowl', '025_mug', '036_wood_block', '037_scissors', '040_large_marker', \
+        #                  '051_large_clamp', '052_extra_large_clamp', '061_foam_brick'}
+
+        # standard balcklist
+        self._blacklist = {'007_tuna_fish_can', '011_banana', '019_pitcher_base', '024_bowl', '025_mug',
+                          '036_wood_block', '037_scissors', '051_large_clamp', '052_extra_large_clamp',
+                          '061_foam_brick'}
+
+        # self._blacklist = {'004_sugar_box', '005_tomato_soup_can', '006_mustard_bottle', \
+        #                  '007_tuna_fish_can', '008_pudding_box', '009_gelatin_box', '010_potted_meat_can', '011_banana', '019_pitcher_base', \
+        #                  '021_bleach_cleanser', '024_bowl', '025_mug', '035_power_drill', '036_wood_block', '037_scissors', '040_large_marker', \
+        #                  '051_large_clamp', '052_extra_large_clamp', '061_foam_brick'}
+
 
         self._class_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), \
                               (128, 0, 0), (0, 128, 0), (0, 0, 128), (128, 128, 0), (128, 0, 128), (0, 128, 128), \
@@ -95,7 +119,12 @@ class lov_synthetic(datasets.imdb):
         """
         Load the indexes listed in this dataset's image set file.
         """
-        image_set_file = os.path.join(self._lov_synthetic_path, self._image_set + cfg.TRAIN.IMAGE_LIST_NAME + '.txt')
+        if cfg.SET_VARIANT == "":
+            image_set_file = os.path.join(self._lov_synthetic_path, self._image_set + cfg.TRAIN.IMAGE_LIST_NAME +
+                                          cfg.SET_VARIANT + '.txt')
+        else:
+            image_set_file = os.path.join(self._lov_synthetic_path, self._image_set + cfg.TRAIN.IMAGE_LIST_NAME +
+                                          "-" + cfg.SET_VARIANT + '.txt')
         assert os.path.exists(image_set_file), \
                 'Path does not exist: {}'.format(image_set_file)
 

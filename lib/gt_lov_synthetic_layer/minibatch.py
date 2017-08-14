@@ -17,9 +17,19 @@ from utils.se3 import *
 import scipy.io
 import numpy as np
 import math
+import random
+import os
+
 
 default_bg_color = [0, 0, 0]
 
+# if cfg.TRAIN.ADD_BACKGROUNDS:
+background_dir = "data/backgrounds/"
+background_image_list = list()
+for image in os.listdir(background_dir):
+    img = cv2.imread(background_dir + image, cv2.IMREAD_UNCHANGED)
+    if img.shape[0] > 500 and img.shape[1] > 800:
+        background_image_list.append(img[:, :, :3])
 
 def get_minibatch(roidb, voxelizer):
     """Given a roidb, construct a minibatch sampled from it."""
@@ -89,16 +99,6 @@ def _get_image_blob(roidb, scale_ind, voxelizer):
     """Builds an input blob from the images in the roidb at the specified
     scales.
     """
-    # cdef float[:, :, :] flow_depth_m
-    # cdef float[:, :, :] im_left_processed_m
-    # cdef float[:, :, :] im_left_warped_m
-    # cdef float[:, :, :] end_point_depths_m
-    # cdef int[:, :] occluded_m
-    # cdef float[:, :] x_m
-    # cdef float[:, :] y_m
-    # cdef float[:, :] z_m
-    # cdef float[:, :] depth2_m
-    # cdef int prev_a, prev_b, a, b, shape_0, shape_1, index_1d, end_x, end_y
 
     num_images = len(roidb)
     processed_left = []
@@ -115,14 +115,42 @@ def _get_image_blob(roidb, scale_ind, voxelizer):
     for i in xrange(num_images):
         im_scale = cfg.TRAIN.SCALES_BASE[scale_ind]
 
+        bg_color = [random.randint(0, 256), random.randint(0, 256), random.randint(0, 256), 0]
+
         im_left_raw = cv2.imread(roidb[i]['image'], cv2.IMREAD_UNCHANGED)
         im_left = pad_im(im_left_raw[:, :, :3], 16).astype(np.float32)
+
+        if cfg.TRAIN.ADD_BACKGROUNDS:
+
+            bg_im = background_image_list.pop(0)
+            background_image_list.append(bg_im)
+            alpha_mask = 1 - im_left_raw[:, :, 3] / 255
+            offset_x = np.random.random_integers(0, bg_im.shape[1] - alpha_mask.shape[1], 1)[0]
+            offset_y = np.random.random_integers(0, bg_im.shape[0] - alpha_mask.shape[0], 1)[0]
+
+            bg_im_cropped = bg_im[offset_y:offset_y + alpha_mask.shape[0], offset_x:offset_x + alpha_mask.shape[1]]
+            im_left = im_left + bg_im_cropped * alpha_mask[:, :, np.newaxis]
+
+        # shape_0 = im_left.shape[0]
+        # shape_1 = im_left.shape[1]
+        # for a in range(shape_0):
+        #     for b in range(shape_1):
+        #         if im_left_raw[a, b, 3] == 0:
+        #             im_left_raw[a, b] = bg_color
+
+
         im_left -= cfg.PIXEL_MEANS
         im_left_processed = cv2.resize(im_left, None, None, fx=im_scale, fy=im_scale,
                                        interpolation=cv2.INTER_LINEAR)
         processed_left.append(im_left_processed)
 
         im_right_raw = cv2.imread(roidb[i]['image_right'], cv2.IMREAD_UNCHANGED)
+        shape_0 = im_right_raw.shape[0]
+        shape_1 = im_right_raw.shape[1]
+        for a in range(shape_0):
+            for b in range(shape_1):
+                if im_right_raw[a, b, 3] == 0:
+                    im_right_raw[a, b] = bg_color
         im_right = pad_im(im_right_raw[:, :, :3], 16).astype(np.float32)
         im_right -= cfg.PIXEL_MEANS
         im_right_processed = cv2.resize(im_right, None, None, fx=im_scale, fy=im_scale,
@@ -131,9 +159,9 @@ def _get_image_blob(roidb, scale_ind, voxelizer):
 
         # meta data
         # meta_data1 = scipy.io.loadmat(roidb[i*2]['meta_data'])
-        K1 = [[1.06677800e+03, 0.00000000e+00, 3.12986900e+02],
-              [0.00000000e+00, 1.06748700e+03, 2.41310900e+02],
-              [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]]
+        K1 = [[  1.06677800e+03,   0.00000000e+00,   3.12986900e+02],
+               [  0.00000000e+00,   1.06748700e+03,   2.41310900e+02],
+               [  0.00000000e+00,   0.00000000e+00,   1.00000000e+00]]
         K1 = np.matrix(K1)
         Kinv = np.linalg.inv(K1)
         rt_mat = np.genfromtxt(roidb[i]['pose'], skip_header=1)
@@ -145,31 +173,33 @@ def _get_image_blob(roidb, scale_ind, voxelizer):
 
         # depth
         depth_raw = pad_im(cv2.imread(roidb[i]['depth'], cv2.IMREAD_UNCHANGED), 16).astype(np.float32)
-        depth2_processed = pad_im(cv2.imread(roidb[i]['depth_right'], cv2.IMREAD_UNCHANGED), 16).astype(
-            np.float32) / 10000
+        depth2_processed = pad_im(cv2.imread(roidb[i]['depth_right'], cv2.IMREAD_UNCHANGED), 16).astype(np.float32) / 10000
         processed_depth.append(depth_raw / 10000)
         processed_depth_right.append(depth2_processed)
         flow_depth = np.zeros([im_left_processed.shape[0], im_left_processed.shape[1], 2], dtype=np.float32) + [0, 0]
         occluded = np.zeros(flow_depth.shape[:2])
 
-        X = voxelizer.backproject_camera(depth_raw, {'factor_depth': 10000, 'intrinsic_matrix': K1}, add_nan=False)
+        # time1 = time.time()
+        X = voxelizer.backproject_camera(depth_raw, {'factor_depth':10000, 'intrinsic_matrix':K1}, add_nan=False)
+        # time2 = time.time()
         transform = np.matmul(K2, se3_mul(rt2, rt1_inv))
         Xp = np.matmul(transform, np.append(X, np.ones([1, X.shape[1]], dtype=np.float32), axis=0))
         z = Xp[2] + 1E-15
         x = Xp[0] / z
         y = Xp[1] / z
+        # time3 = time.time()
 
         occluded[depth_raw == 0] = 1
 
-        end_point_depths = np.zeros([flow_depth.shape[0], flow_depth.shape[1], 3], dtype=np.float32)
-        im_left_warped = im_left_processed.copy() * 0
+        # end_point_depths = np.zeros([flow_depth.shape[0], flow_depth.shape[1], 3], dtype=np.float32)
+        # im_left_warped = im_left_processed.copy() * 0
 
         flow_depth_m = flow_depth.astype(np.float32)
         im_left_processed_m = im_left_processed.astype(np.float32)
         im_left_processed_m = im_left_processed.astype(np.float32)
-        end_point_depths_m = end_point_depths.astype(np.float32)
+        # end_point_depths_m = end_point_depths.astype(np.float32)
         occluded_m = occluded.astype(np.int32)
-        im_left_warped_m = im_left_warped.astype(np.float32)
+        # im_left_warped_m = im_left_warped.astype(np.float32)
         x_m = x.astype(np.float32)
         y_m = y.astype(np.float32)
         z_m = z.astype(np.float32)
@@ -179,7 +209,7 @@ def _get_image_blob(roidb, scale_ind, voxelizer):
         shape_0 = im_left_processed.shape[0]
         shape_1 = im_left_processed.shape[1]
 
-        # for a in prange(shape_0, nogil=True, schedule='static', num_threads=10):
+
         for a in range(shape_0):
             for b in range(shape_1):
                 if occluded_m[a, b] == 1:
@@ -187,80 +217,48 @@ def _get_image_blob(roidb, scale_ind, voxelizer):
                     flow_depth_m[a, b, 1] = 0.0
                     continue
 
-                index_1d = a * shape_1 + b
+                index_1d = a*shape_1+b
                 end_x = int(x_m[0, index_1d])
                 end_y = int(y_m[0, index_1d])
 
+                flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
+                flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
+
                 if not ((0 <= end_x < shape_1) and (0 <= end_y < shape_0)):
-                    flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
-                    flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
-                elif depth2_m[end_y, end_x] * 0.995 < z_m[0, index_1d] < depth2_m[end_y, end_x] * 1.005:
+                    pass
+                elif depth2_m[end_y, end_x] * 0.997 < z_m[0, index_1d] < depth2_m[end_y, end_x] * 1.003:
                     flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
                     flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
                     # end_point_depths_m[end_y, end_x, 0] = z_m[0, index_1d]
-                    im_left_warped_m[end_y, end_x, 0] = im_left_processed_m[a, b, 0]
-                    im_left_warped_m[end_y, end_x, 1] = im_left_processed_m[a, b, 1]
-                    im_left_warped_m[end_y, end_x, 2] = im_left_processed_m[a, b, 2]
+                    # im_left_warped_m[end_y, end_x, 0] = im_left_processed_m[a, b, 0]
+                    # im_left_warped_m[end_y, end_x, 1] = im_left_processed_m[a, b, 1]
+                    # im_left_warped_m[end_y, end_x, 2] = im_left_processed_m[a, b, 2]
+                    pass
                 else:
                     occluded_m[a, b] = 1
 
-        # # for a in prange(shape_0, nogil=True, schedule='static', num_threads=10):
-        # for a in range(shape_0):
-        #     for b in range(shape_1):
-        #         if occluded_m[a, b] == 1:
-        #             flow_depth_m[a, b, 0] = 0.0
-        #             flow_depth_m[a, b, 1] = 0.0
-        #             continue
-        #
-        #         index_1d = a*shape_1+b
-        #         end_x = <int> x_m[0, index_1d]
-        #         end_y = <int> y_m[0, index_1d]
-        #
-        #         if right_depth_pred[end_y, end_x] > z_m[0, index_1d] or right_depth_pred[end_y, end_x] == 0.0:
-        #             right_depth_pred[end_y, end_x] = z_m[0, index_1d]
-        #
-        #         if not ((0 <= end_x < shape_1) and (0 <= end_y < shape_0)):
-        #             flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
-        #             flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
-        #         elif depth2_m[a, b] * 0.99 < z_m[0, index_1d] < depth2_m[a, b] * 1.01:
-        #             flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
-        #             flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
-        #             # end_point_depths_m[end_y, end_x, 0] = z_m[0, index_1d]
-        #             im_left_warped_m[end_y, end_x, 0] = im_left_processed_m[a, b, 0]
-        #             im_left_warped_m[end_y, end_x, 1] = im_left_processed_m[a, b, 1]
-        #             im_left_warped_m[end_y, end_x, 2] = im_left_processed_m[a, b, 2]
-        #         # elif (end_point_depths_m[end_y, end_x, 0] < z_m[0, index_1d]) and (end_point_depths_m[end_y, end_x, 0] != 0):
-        #         #     occluded_m[a, b] = 1
-        #         # elif (end_point_depths_m[end_y, end_x, 0] > z_m[0, index_1d]) and (end_point_depths_m[end_y, end_x, 0] != 0):
-        #         #     occluded_m[<int> end_point_depths_m[end_y, end_x, 1], <int> end_point_depths_m[end_y, end_x, 2]] = 1
-        #         #     flow_depth_m[a, b, 0] = x_m[0, index_1d] - b
-        #         #     flow_depth_m[a, b, 1] = y_m[0, index_1d] - a
-        #         #     end_point_depths_m[end_y, end_x, 0] = z_m[0, index_1d]
-        #         #     im_left_warped_m[end_y, end_x, 0] = im_left_processed_m[a, b, 0]
-        #         #     im_left_warped_m[end_y, end_x, 1] = im_left_processed_m[a, b, 1]
-        #         #     im_left_warped_m[end_y, end_x, 2] = im_left_processed_m[a, b, 2]
-        #         else:
-        #             occluded_m[a, b] = 1
+        # time4 = time.time()
+        # print "backproject took ", time2 - time1
+        # print "transformation to right camera took ", time3 - time2
+        # print "loop took ",  time4 - time3
 
         if cfg.TRAIN.USE_MASKS:
             # read left label image
             alpha_channel_l = im_left_raw[:, :, 3] / 255.
-            im_cls = (np.dstack([np.zeros(im_left_raw.shape[:3]), alpha_channel_l]))
+            im_cls = (np.dstack([np.zeros(im_left_raw.shape[:2]), alpha_channel_l]))
             processed_left_labels.append(im_cls)
 
             # read right label image
             alpha_channel_r = im_right_raw[:, :, 3] / 255.
-            im_cls_r = (np.dstack([np.zeros(im_left_raw.shape[:3]), alpha_channel_r]))
+            im_cls_r = (np.dstack([np.zeros(im_left_raw.shape[:2]), alpha_channel_r]))
             processed_right_labels.append(im_cls_r)
         else:
-            processed_left_labels.append(
-                np.zeros([im_left_processed.shape[0], im_left_processed.shape[1], 2], dtype=np.int32) + [0, 1])
-            processed_right_labels.append(
-                np.zeros([im_left_processed.shape[0], im_left_processed.shape[1], 2], dtype=np.int32) + [0, 1])
+            processed_left_labels.append(np.zeros([im_left_processed.shape[0], im_left_processed.shape[1],2], dtype=np.int32) + [0, 1])
+            processed_right_labels.append(np.zeros([im_left_processed.shape[0], im_left_processed.shape[1],2], dtype=np.int32) + [0, 1])
 
-        processed_flow.append(np.asarray(flow_depth_m).copy()[:, :, :2])
+        processed_flow.append(np.asarray(flow_depth_m).copy()[:,:,:2])
         processed_occluded.append(np.asarray(occluded_m).copy())
-        processed_warped.append(np.asarray(im_left_warped_m).copy())
+        # processed_warped.append(np.asarray(im_left_warped_m).copy())
 
     # Create a blob to hold the input images
     left = im_list_to_blob(processed_left, 3)
@@ -275,7 +273,8 @@ def _get_image_blob(roidb, scale_ind, voxelizer):
     else:
         left_labels = im_list_to_blob(processed_left_labels, 2, mess_up_single_channel=True)
         right_labels = im_list_to_blob(processed_right_labels, 2, mess_up_single_channel=True)
-    warped = im_list_to_blob(processed_warped, 3)
+    # warped = im_list_to_blob(processed_warped, 3)
+    warped = [[0]]
 
     return left, right, flow, occluded, left_labels, right_labels, depth, right_depth, warped
 
@@ -472,8 +471,8 @@ def _vis_minibatch(left_blob, right_blob, flow_blob, occluded_blob, left_label_b
         iiiiii += 1
         axes_right_list.append(ax2)
 
-        average_diff = np.mean(warped_blob[i].astype(np.float32) - right_blob[i]) * \
-                       (np.product(right_blob[i].shape) / np.count_nonzero(warped_blob[i]))
+        # average_diff = np.mean(warped_blob[i].astype(np.float32) - right_blob[i]) * \
+        #                (np.product(right_blob[i].shape) / np.count_nonzero(warped_blob[i]))
 
         ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
         ax2.imshow(np.squeeze(depth_blob[i]))
@@ -497,7 +496,7 @@ def _vis_minibatch(left_blob, right_blob, flow_blob, occluded_blob, left_label_b
                              y_plots, fig)
 
         fig.suptitle("Left Image: " + str(str(roidb[i]['image']).split("/")[-2:]) + "\nright image: " +
-                     str(str(roidb[i]['image_right']).split("/")[-2:]) + "\naverage diff: " + str(average_diff))
+                     str(str(roidb[i]['image_right']).split("/")[-2:]))
 
         plt.show()
         plt.close()

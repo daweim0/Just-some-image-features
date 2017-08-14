@@ -1,7 +1,6 @@
-EXP_DIR: lov_synthetic_features
+EXP_DIR: lov_synthetic_features_fpn_4_triplets
 INPUT: LEFT_RIGHT_CORRESPONDENCE
-NETWORK: net_labeled_features_deeper
-#NETWORK: net_labeled_multi_scale_features
+NETWORK: net_labeled_fpn
 LOSS_FUNC: L2
 PUPPER_DATASET: False
 NORMALIZE_IMAGES: False
@@ -20,7 +19,8 @@ TRAIN:
   GRID_SIZE: 256
   IMS_PER_BATCH: 1
   LEARNING_RATE: 0.0001
-  LEARNING_RATE_ADAM: 0.00000001
+#  LEARNING_RATE_ADAM:  0.00010
+  LEARNING_RATE_ADAM: 0.0000001
   MOMENTUM: 0.5
   NUM_CLASSES: 10
   NUM_STEPS: 5
@@ -35,6 +35,7 @@ TRAIN:
   STEPSIZE: 15000
   USE_MASKS: True
   TRAINABLE: True  # only sets if the vgg16 weights are trainable, has no effect on rest of network
+  ADD_BACKGROUNDS: True
   VISUALIZE: False
 #  IMAGE_LIST_NAME: _single
 TEST:

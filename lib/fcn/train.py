@@ -111,7 +111,7 @@ class SolverWrapper(object):
             train_writer.add_summary(summary, iter)
             timer.toc()
             
-            print 'iter: %d / %d, loss: %7.4f, lr: %.8f, momentum: %2.2f, time: %1.2f, queue size before training op: %3i' %\
+            print 'iter: %d / %d, loss: %7.4f, lr: %0.2e, momentum: %2.2f, time: %1.2f, queue size before training op: %3i' %\
                     (iter+1, max_iters, loss_value, lr, momentum, timer.diff, queue_size)
             loss_history.append(loss_value)
 
@@ -415,8 +415,10 @@ def train_net(network, imdb, roidb, output_dir, pretrained_model=None, max_iters
                                            cfg.TRAIN.STEPSIZE, 0.1, staircase=True)
     momentum = cfg.TRAIN.MOMENTUM
     train_op = tf.train.MomentumOptimizer(learning_rate, momentum).minimize(loss, global_step=global_step)
-    
-    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
+
+    config = tf.ConfigProto(allow_soft_placement=True)
+    config.gpu_options.allow_growth = True
+    with tf.Session(config=config) as sess:
 
         sw = SolverWrapper(sess, network, imdb, roidb, output_dir, pretrained_model=pretrained_model)
 

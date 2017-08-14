@@ -93,7 +93,7 @@ if __name__ == '__main__':
         output_dir = osp.abspath(osp.join(cfg.ROOT_DIR, 'output', cfg.EXP_DIR,
                                           "batch_size_" + str(cfg.TRAIN.IMS_PER_BATCH) + "_loss_" + str(cfg.LOSS_FUNC) +
                                           "_optimizer_" + cfg.TRAIN.OPTIMIZER + "_network_"+ str(cfg.NETWORK) +
-                                          "_" + str(datetime.date.today())))
+                                          "_" + str(datetime.datetime.now().timetuple()[:6]).replace("(", "").replace(")", "").replace(", ", "-")))
         print 'Output will be saved to `{:s}`'.format(output_dir)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
