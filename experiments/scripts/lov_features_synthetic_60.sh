@@ -10,5 +10,4 @@ export CUDA_VISIBLE_DEVICES=$1
 ./tools/test_net.py --gpu 0 \
 --model "$2" \
 --imdb lov_synthetic_val-59_60_long \
---cfg experiments/cfgs/lov_features.yml \
---calc_EPE_all True
+--cfg experiments/cfgs/lov_features.yml

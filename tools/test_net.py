@@ -11,17 +11,14 @@
 """Test a FCN on an image database."""
 
 import _init_paths
-# from fcn.test import test_net, test_gan
-# from fcn.test import test_net_single_frame
 from fcn.test import test_flow_net
 from fcn.config import cfg, cfg_from_file, cfg_from_string
 from datasets.factory import get_imdb
 import argparse
 import pprint
-import time, os, sys
+import os, sys
 import tensorflow as tf
 import os.path as osp
-import ast
 
 def parse_args():
     """
@@ -35,8 +32,8 @@ def parse_args():
     parser.add_argument('--imdb', dest='imdb_name', help='dataset to test', default=None, type=str)
     parser.add_argument('--network', dest='network_name', help='name of the network', default=None, type=str)
     parser.add_argument('--n_cpu_threads', dest='n_cpu_threads', help='passed to tensorflow', default=10, type=int)
-    parser.add_argument('--show_correspondence', dest='show_correspondence', help='draw lines between corresponding points', default='False', type=str)
-    parser.add_argument('--calc_EPE_all', dest='calc_EPE_all', help='calculate EPE for all testing data', default='False', type=str)
+    parser.add_argument('--show_correspondence', dest='show_correspondence', help='draw lines between corresponding points', type=bool)
+    parser.add_argument('--calc_EPE_all', dest='calc_EPE_all', help='calculate EPE for all testing data', type=bool)
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -86,12 +83,12 @@ if __name__ == '__main__':
 
     from networks.factory import get_network
     network = get_network(cfg.NETWORK)
-    print '\n# Using network `{:s}` for testing (from folder `{:s}`'.format(args.network_name, args.model)
+    print '\n# Using network from folder `{:s}`'.format(args.model)
 
     # start a session
     saver = tf.train.Saver()
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=args.n_cpu_threads))
     saver.restore(sess, args.model)
 
-    test_flow_net(sess, network, imdb, weights_filename, show_arrows=args.show_correspondence=='True', calculate_EPE_all_data=args.calc_EPE_all=='True')
+    test_flow_net(sess, network, imdb, weights_filename, show_arrows=args.show_correspondence, calculate_EPE_all_data=args.calc_EPE_all)
 

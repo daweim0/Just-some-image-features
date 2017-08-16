@@ -10,13 +10,16 @@ import scipy.ndimage
 
 
 def get_flow_parallel_pyramid(left_features, right_features, masks, neighborhood_len_import=6, interpolate_after=False):
+    """
+    Compute flow using a feature pyramid. The lists of images should be smallest to largest.
+    :param neighborhood_len_import: Search radius for the highest resolution
+    """
     assert(len(left_features) == len(right_features) == len(masks))
     current_flow = np.zeros([left_features[0].shape[0], left_features[0].shape[1], 2], dtype=np.float32)
     #TODO: justify this as the correct neighborhood_len when using a pyramid
     search_range = list([left_features[0].shape[0] / float(left_features[-1].shape[0]) * neighborhood_len_import])
     for i in range(len(left_features) - 1):
         search_range.append((left_features[i+1].shape[0] / left_features[i].shape[0] + 1) * 10)
-        # search_range.append(100)
 
     output_flows = list()
 
@@ -32,6 +35,17 @@ def get_flow_parallel_pyramid(left_features, right_features, masks, neighborhood
 
 
 def get_flow_parallel(left_features, right_features, mask, neighborhood_len_import=6, interpolate_after=False, initialization=None):
+    """
+    Compute optical flow using a seperate python process. This is done because Tensorflow breaks OpenMP support
+    (probably because of eigen?). Calculating flow in a separate process re-enables OpenMP within cython.
+    :param left_features:
+    :param right_features:
+    :param mask:
+    :param neighborhood_len_import:
+    :param interpolate_after:
+    :param initialization: The flow array that
+    :return:
+    """
     if initialization is None:
         initialization = np.zeros([left_features.shape[0], left_features.shape[1], 2], dtype=np.float32)
     random = str(time.clock() * os.getpid())
@@ -41,11 +55,8 @@ def get_flow_parallel(left_features, right_features, mask, neighborhood_len_impo
     np.save("temp/" + random + "right_features.npy", right_features)
     np.save("temp/" + random + "mask.npy", mask)
     np.save("temp/" + random + "initialization.npy", initialization)
-    # os.path.dirname(os.path.realpath(__file__))
     p = subprocess.Popen(['python', 'lib/triplet_flow_loss/run_slow_flow_calculator_process.py', random])
     p.wait()
-    # compute_stuff(random)
-    print "subprocess finished"
     flow = np.load("temp/" + random + "flow.npy")
     feature_errors = np.load("temp/" + random + "feature_errors.npy")
     subprocess.call("rm temp/" + random + "*", shell=True)

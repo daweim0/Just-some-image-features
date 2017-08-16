@@ -20,8 +20,6 @@ from cython.parallel import parallel, prange, threadid
 import random
 import os
 
-from libc.stdio cimport printf
-
 background_dir = "data/backgrounds/"
 background_image_list = list()
 for image in os.listdir(background_dir):
@@ -34,7 +32,6 @@ def get_minibatch(roidb, voxelizer):
 
     # Get the input image blob, formatted for tensorflow
     random_scale_ind = npr.randint(0, high=len(cfg.TRAIN.SCALES_BASE))
-    # if cfg.MODE == "test":
     image_left_blob, image_right_blob, flow_blob, occluded_blob, left_label_blob, right_label_blob, depth_blob, right_depth_blob, warped_blob = _get_image_blob(roidb, random_scale_ind, voxelizer)
 
     blobs = {'left_image': image_left_blob,
@@ -53,7 +50,7 @@ def get_minibatch(roidb, voxelizer):
     return blobs
 
 
-@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
 cdef _get_image_blob(roidb, scale_ind, voxelizer):

@@ -25,9 +25,8 @@ This hopefully won't become the dumping ground of a dead thing.
 
 5. Once a model is trained it can be tested like so
     ```Shell
-    ./experiments/scripts/lov_features_synthetic_60.sh 0 output/lov_synthetic_features_fpn_2x/batch_size_3_loss_L2_optimizer_ADAM_network_net_labeled_fpn_fixed_2017-8-14-17-41-39/vgg16_flow_lov_features_iter_26000.ckpt
+    ./experiments/scripts/lov_features_synthetic_60.sh 0 (Path to trained checkpoint like output/lov_synthetic_features_fpn_2x/batch_size_3_loss_L2_optimizer_ADAM_network_net_labeled_fpn_fixed_2017-8-14-17-41-39/vgg16_flow_lov_features_iter_26000.ckpt)
     ```
-  (or you can use your own trained network)
 
 ### License
 

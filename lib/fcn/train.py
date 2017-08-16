@@ -162,7 +162,7 @@ def load_and_enqueue(sess, net, roidb, num_classes, coord):
         right_labels = blobs['right_labels']
 
         feed_dict = {net.data_left: left_blob, net.data_right: right_blob, net.gt_flow: flow_blob,
-                     net.occluded: occluded_blob, net.labels_left: left_labels, net.labels_right: right_labels}
+                     net.occluded: occluded_blob, net.labels_left: left_labels, net.labels_right: right_labels, net.keep_prob: 1.0}
 
         try:
             sess.run(net.enqueue_op, feed_dict=feed_dict)

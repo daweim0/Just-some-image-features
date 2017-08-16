@@ -9,6 +9,7 @@
 
 """Train a Fully Convolutional Network (FCN) on image segmentation database."""
 
+import _init_paths
 from fcn.train import get_training_roidb, train_flow
 from fcn.config import cfg, cfg_from_file, get_output_dir
 from datasets.factory import get_imdb

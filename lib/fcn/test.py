@@ -222,36 +222,12 @@ def test_flow_net(sess, net, imdb, weights_filename, save_image=False, calculate
                 iiiiii += 1
                 axes_right_list.append(ax2)
 
-                # # show right
-                # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-                # ax2.imshow(sintel_utils.sintel_compute_color(gt_flow))
-                # ax2.set_title("flow)")
-                # iiiiii += 1
-                # axes_left_list.append(ax2)
-                #
-                # # show right
-                # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-                # ax2.imshow(sintel_utils.raw_color_from_flow(gt_flow))
-                # ax2.set_title("flow")
-                # iiiiii += 1
-                # axes_left_list.append(ax2)
-
-                # # show occluded
-                # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-                # ax2.imshow(((np.squeeze(occluded_blob[0]) * -1 + 1)[:, :, np.newaxis] * im_left).astype(np.uint8))
-                # ax2.set_title("occluded")
-                # iiiiii += 1
-                # axes_left_list.append(ax2)
-
-                # # warped
-                # ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
-                # ax2.imshow(fix_rgb_image(np.squeeze(warped_blob[0]).astype(np.uint8)))
-                # ax2.set_title("warped left image")
-                # iiiiii += 1
-                # axes_right_list.append(ax2)
-
-                # average_diff = np.mean(np.abs(warped_blob[0].astype(np.float32) - right_blob[0])) * \
-                #                (np.product(right_blob[0].shape) / np.count_nonzero(warped_blob[0]))
+                # show occluded
+                ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
+                ax2.imshow(((np.squeeze(occluded_blob[0]) * -1 + 1)[:, :, np.newaxis] * im_left).astype(np.uint8))
+                ax2.set_title("occluded")
+                iiiiii += 1
+                axes_left_list.append(ax2)
 
                 # create flow images, but don't display them yet
                 gt_flow_raw_color = sintel_utils.raw_color_from_flow(gt_flow)
@@ -317,10 +293,10 @@ def test_flow_net(sess, net, imdb, weights_filename, save_image=False, calculate
                 # iiiiii += 1
                 # axes_left_list.append(ax2)
 
-                left_labels = (left_labels_blob[0] * np.arange(1, left_labels_blob[0].shape[2] + 1)).sum(axis=2)
-                right_labels = (right_labels_blob[0] * np.arange(1, right_labels_blob[0].shape[2] + 1)).sum(axis=2)
-                display_img(np.squeeze(left_labels), "left labels")
-                display_img(np.squeeze(right_labels), "right labels", right=True)
+                # left_labels = (left_labels_blob[0] * np.arange(1, left_labels_blob[0].shape[2] + 1)).sum(axis=2)
+                # right_labels = (right_labels_blob[0] * np.arange(1, right_labels_blob[0].shape[2] + 1)).sum(axis=2)
+                # display_img(np.squeeze(left_labels), "left labels")
+                # display_img(np.squeeze(right_labels), "right labels", right=True)
 
                 random_matrix = np.random.rand(features_l.shape[2], 3)
                 feature_ax_list = list()
@@ -350,17 +326,15 @@ def test_flow_net(sess, net, imdb, weights_filename, save_image=False, calculate
                 display_img(feature_similarity, "neighboring feature difference (l1 distance)")
 
 
-                x_points = list()
-                y_points = list()
-                x_points_right = list()
-                y_points_right = list()
-                colors = list()
-
-                point_list = list()
-
                 # Store point_list in a closure because onclick will be called by a matplotlib event handler and we
                 # can't pass it any arguments
-                def get_onclick(point_list):
+                def get_onclick():
+                    # So variables can persist between calls
+                    point_list = list()
+                    x_points = list()
+                    y_points = list()
+                    x_points_right = list()
+                    y_points_right = list()
                     def onclick(event):
                         print(
                         'button', event.button, 'x=', event.x, 'y=', event.y, 'xdata=', event.xdata, 'ydata=', event.ydata)
@@ -394,12 +368,10 @@ def test_flow_net(sess, net, imdb, weights_filename, save_image=False, calculate
                                                            [y_point / 480 * (np.max(sub_ax.get_ylim()) + 0.5)], c=[color], s=7, marker='1')
 
                                         for ii in point_list:
-                                            # blue_point.remove()
                                             ii.remove()
                                         while len(point_list) > 0:
                                             point_list.pop()
                                         for sub_ax in axes_right_list:
-                                            # blue_point = sub_ax.scatter([x_point], [y_point], c='BLUE', s=7, marker='p')
                                             point_list.append(sub_ax.scatter([(x_point + int(predicted_flow[int(y_point), int(x_point), 0])) / 640 * (np.max(sub_ax.get_xlim()) + 0.5)],
                                                            [(y_point + int(predicted_flow[int(y_point), int(x_point), 1])) / 640 * (np.max(sub_ax.get_xlim()) + 0.5)], c='RED', edgecolors='WHITE', s=8, marker='o'))
                                             point_list.append(sub_ax.scatter([(x_point + int(gt_flow[int(y_point), int(x_point), 0])) / 640 * (np.max(sub_ax.get_xlim()) + 0.5)],
@@ -410,7 +382,7 @@ def test_flow_net(sess, net, imdb, weights_filename, save_image=False, calculate
                                 break
                     return onclick
 
-                cid = fig.canvas.mpl_connect('button_press_event', get_onclick(point_list))
+                fig.canvas.mpl_connect('button_press_event', get_onclick())
 
                 def get_handle_key_press(feature_ax_list):
                     # So triplets can persist between calls
@@ -511,43 +483,43 @@ def fix_rgb_image(image_in):
     return image
 
 
-def calculate_flow_single_frame(sess, net, im_left, im_right):
-    # compute image blob
-    left_blob, right_blob, im_scales = _get_flow_image_blob(im_left, im_right, 0)
-
-    feed_dict = {net.data_left: left_blob, net.data_right: right_blob,
-                 net.gt_flow: np.zeros([left_blob.shape[0], left_blob.shape[1], left_blob.shape[2], 2],
-                                       dtype=np.float32), net.keep_prob: 1.0}
-
-    sess.run(net.enqueue_op, feed_dict=feed_dict)
-    output_flow = sess.run([net.get_output('predicted_flow')])
-    return output_flow
-
-
-def siphon_flow_single_frame(sess, net, im_left, im_right):
-    # compute image blob
-    left_blob, right_blob, im_scales = _get_flow_image_blob(im_left, im_right, 0)
-
-    training_data_queue = list()
-    queue_start_size = sess.run(net.queue_size_op)
-    while sess.run(net.queue_size_op) != 0:
-        training_data_queue.append(sess.run({'left':net.get_output('data_left'), 'right':net.get_output('data_right'),
-                                             'flow':net.get_output('gt_flow'), 'keep_prob':net.keep_prob_queue}))
-
-    feed_dict = {net.data_left: left_blob, net.data_right: right_blob,
-                 net.gt_flow: np.zeros([left_blob.shape[0], left_blob.shape[1], left_blob.shape[2], 2],
-                                       dtype=np.float32), net.keep_prob: 1.0}
-
-    sess.run(net.enqueue_op, feed_dict=feed_dict)
-    output = sess.run({'flow':net.get_output('predicted_flow'), 'left':net.get_output('data_left_tap'),
-                            'right':net.get_output('data_left_tap')})
-
-    for i in training_data_queue:
-        feed_dict = {net.data_left: i['left'], net.data_right: i['right'], net.gt_flow: i['flow'], net.keep_prob: i['keep_prob']}
-        sess.run(net.enqueue_op, feed_dict=feed_dict)
-
-    # assert sess.run(net.queue_size_op) == queue_start_size, "data queue size changed"
-    return output
+# def calculate_flow_single_frame(sess, net, im_left, im_right):
+#     # compute image blob
+#     left_blob, right_blob, im_scales = _get_flow_image_blob(im_left, im_right, 0)
+#
+#     feed_dict = {net.data_left: left_blob, net.data_right: right_blob,
+#                  net.gt_flow: np.zeros([left_blob.shape[0], left_blob.shape[1], left_blob.shape[2], 2],
+#                                        dtype=np.float32), net.keep_prob: 1.0}
+#
+#     sess.run(net.enqueue_op, feed_dict=feed_dict)
+#     output_flow = sess.run([net.get_output('predicted_flow')])
+#     return output_flow
+#
+#
+# def siphon_flow_single_frame(sess, net, im_left, im_right):
+#     # compute image blob
+#     left_blob, right_blob, im_scales = _get_flow_image_blob(im_left, im_right, 0)
+#
+#     training_data_queue = list()
+#     queue_start_size = sess.run(net.queue_size_op)
+#     while sess.run(net.queue_size_op) != 0:
+#         training_data_queue.append(sess.run({'left':net.get_output('data_left'), 'right':net.get_output('data_right'),
+#                                              'flow':net.get_output('gt_flow'), 'keep_prob':net.keep_prob_queue}))
+#
+#     feed_dict = {net.data_left: left_blob, net.data_right: right_blob,
+#                  net.gt_flow: np.zeros([left_blob.shape[0], left_blob.shape[1], left_blob.shape[2], 2],
+#                                        dtype=np.float32), net.keep_prob: 1.0}
+#
+#     sess.run(net.enqueue_op, feed_dict=feed_dict)
+#     output = sess.run({'flow':net.get_output('predicted_flow'), 'left':net.get_output('data_left_tap'),
+#                             'right':net.get_output('data_left_tap')})
+#
+#     for i in training_data_queue:
+#         feed_dict = {net.data_left: i['left'], net.data_right: i['right'], net.gt_flow: i['flow'], net.keep_prob: i['keep_prob']}
+#         sess.run(net.enqueue_op, feed_dict=feed_dict)
+#
+#     # assert sess.run(net.queue_size_op) == queue_start_size, "data queue size changed"
+#     return output
 
 
 def siphon_outputs_single_frame(sess, net, data_feed_dict, outputs):
