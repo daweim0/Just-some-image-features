@@ -3,6 +3,7 @@
 # Copyright (c) 2016 RSE at UW
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Yu Xiang
+# Modified by David Michelman
 # --------------------------------------------------------
 
 """The data layer used during training to train a FCN for single frames.
@@ -11,9 +12,7 @@
 from fcn.config import cfg
 import numpy as np
 from utils.voxelizer import Voxelizer
-import random
 
-# import pyximport; pyximport.install()
 from gt_lov_synthetic_layer.minibatch import get_minibatch
 
 

@@ -13,16 +13,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-// Lifted Structured Loss Op
+// Triplet Loss Op
 
 
 //#define DEBUG_NAN
 
 const int n_target_triplets = 1000;  // per object
-const int n_negatives_per_positive = 100;
-const bool dense_sampling = false;
-const int MAX_ITERS = 50000;
-const int WARN_AT_ITER = 2000;
+const int n_negatives_per_positive = 100;  // number of negative points to sample per each positive point
+const int MAX_ITERS = 50000;  // give up after attempting to sample a point this many times
 
 
 #include <stdio.h>
@@ -431,7 +429,9 @@ public:
             }
         }
 
-
+/* Uncomment this code to print out the triplets selected. They can then be visualized in test_net.py by copying
+ * this output to the clipboard then pressing y in the visualization window. Pressing t cycles through
+ * the triplets until they have all been visualized */
 //        std::cout << "[";
 //        for (int i = 0; i < triplets.size()/3; i++) {
 //           std::cout  << "[" << triplets[i * 3] << ", " << triplets[i * 3 + 1] << ", " << triplets[i*3+2] << "]";
@@ -445,7 +445,6 @@ public:
         double loss = 0;
         // for each triplet
         int num_triplets = triplets.size() / 3;
-//        std::cout << "num_triplets: " << num_triplets << std::endl;
         for (int triplet_num = 0; triplet_num < num_triplets; triplet_num++)
         {
             const int index_i = triplets.at(triplet_num * 3 + 0);
@@ -473,9 +472,7 @@ public:
                     assert(false);
                 }
 
-//                std::cout << "hi 2.1" << std::endl;
                 D_ij += pow(left_data_array[data_i_index] - right_data_array[data_j_index], 2);
-//                std::cout << "hi 2.2" << std::endl;
                 D_ik += pow(left_data_array[data_i_index] - left_data_array[data_k_index], 2);
             }
             // add the loss
@@ -487,14 +484,6 @@ public:
                 std::cout << "loss will be nan! (" << loss << ")" << std::endl;
                 num_triplets += 1;
             }
-
-            // std::cout << "dis: " << dis << " D_ij: " << D_ij << " D_ik: " << D_ik << std::endl;
-            if(old_loss > loss && dis > 0.0 && 1 < 0) {
-                std::cout << "loss overflowed, old_loss: " << old_loss << " loss: " << loss << std::endl;
-                assert(false);
-            }
-
-
 
             // compute gradients
             if (dis > 0) {
@@ -516,26 +505,19 @@ public:
                     }
 
                     // update x_i
-//                    std::cout << "hi 2.3, diff_i_index =" << diff_i_index << std::endl;
                     bottom_left_diff[diff_i_index] +=
                             (left_data_array[diff_k_index] - right_data_array[diff_j_index]) / num_triplets;
                     // update x_j
-//                    std::cout << "hi 2.4, diff_j_index =" << diff_j_index << std::endl;
                     bottom_right_diff[diff_j_index] +=
                             (right_data_array[diff_j_index] - left_data_array[diff_i_index]) / num_triplets;
                     // update x_k
-//                    std::cout << "hi 2.5, diff_k_index =" << diff_k_index << std::endl;
                     bottom_left_diff[diff_k_index] +=
                             (left_data_array[diff_i_index] - left_data_array[diff_k_index]) / num_triplets;
                 }
             }
         }
-//        std::cout << "pre-scaled loss: " << loss;
         loss /= num_triplets * 2.0;
-//        std::cout << " scaled loss: " << loss << std::endl;
-//		top_data(0) = T(loss);
         top_data.setConstant(T(loss));
-//        std::cout << "hi3" << std::endl;
 
 #ifdef DEBUG_NAN
         feclearexcept(FE_ALL_EXCEPT);

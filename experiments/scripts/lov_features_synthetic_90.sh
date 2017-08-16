@@ -17,8 +17,3 @@ export LD_PRELOAD=/usr/lib/libtcmalloc.so.4
   --imdb lov_synthetic_train-45_90 \
   --cfg experiments/cfgs/lov_features.yml \
   --iters 40000
-
-if [ -f $PWD/output/sintel_albedo/sintel_albedo_val/vgg16_fcn_color_single_frame_lov_iter_40000/segmentations.pkl ]
-then
-  rm $PWD/output/sintel_albedo/sintel_albedo_val/vgg16_fcn_color_single_frame_lov_iter_40000/segmentations.pkl
-fi

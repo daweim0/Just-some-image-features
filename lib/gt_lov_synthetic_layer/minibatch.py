@@ -1,14 +1,15 @@
 # --------------------------------------------------------
 # FCN
-# Copyright (c) 2016
+# Copyright (c) 2016 RSE at UW
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Yu Xiang
+# Heavily modified by David Michelman
 # --------------------------------------------------------
 
-"""Compute minibatch blobs for training a Fast R-CNN network."""
+"""Compute minibatch blobs for training a neural network. This implementation serves as a testing ground,
+minibatch.pyx should actually be used when training"""
 
-import sys
-import numpy as np
+
 import numpy.random as npr
 import cv2
 from fcn.config import cfg
@@ -16,7 +17,6 @@ from utils.blob import im_list_to_blob, pad_im, chromatic_transform
 from utils.se3 import *
 import scipy.io
 import numpy as np
-import math
 import random
 import os
 

@@ -1,6 +1,6 @@
-EXP_DIR: lov_synthetic_features_fpn_4_triplets
+EXP_DIR: lov_synthetic_features_fpn_2x
 INPUT: LEFT_RIGHT_CORRESPONDENCE
-NETWORK: net_labeled_fpn
+NETWORK: net_labeled_fpn_fixed
 LOSS_FUNC: L2
 PUPPER_DATASET: False
 NORMALIZE_IMAGES: False
@@ -17,7 +17,7 @@ TRAIN:
   GAMMA: 0.1
   GAN: False
   GRID_SIZE: 256
-  IMS_PER_BATCH: 1
+  IMS_PER_BATCH: 3
   LEARNING_RATE: 0.0001
 #  LEARNING_RATE_ADAM:  0.00010
   LEARNING_RATE_ADAM: 0.0000001

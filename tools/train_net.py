@@ -9,15 +9,12 @@
 
 """Train a Fully Convolutional Network (FCN) on image segmentation database."""
 
-import _init_paths
-import cv2
-from fcn.train import get_training_roidb, train_net, train_gan, train_flow
+from fcn.train import get_training_roidb, train_flow
 from fcn.config import cfg, cfg_from_file, get_output_dir
 from datasets.factory import get_imdb
 import argparse
 import pprint
 import numpy as np
-import sys
 import os.path as osp
 import datetime
 import os
@@ -97,9 +94,7 @@ if __name__ == '__main__':
         print 'Output will be saved to `{:s}`'.format(output_dir)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        else:
-            # sys.stderr.write("output directory already exists, please move it or choose another output dir")
-            pass
+
         pprint.pprint(cfg, stream=open(output_dir + "/config.txt", 'w'))
 
     device_name = '/gpu:{:d}'.format(args.gpu_id)
@@ -117,15 +112,6 @@ if __name__ == '__main__':
     network = get_network(cfg.NETWORK)
     print 'Use network `{:s}` in training'.format(cfg.NETWORK)
 
-    if cfg.TRAIN.GAN:
-        train_gan(network, imdb, roidb, output_dir,
+    train_flow(network, imdb, roidb, output_dir,
               pretrained_model=pretrained_model,
-              max_iters=args.max_iters)
-    elif cfg.TRAIN.OPTICAL_FLOW:
-        train_flow(network, imdb, roidb, output_dir,
-                  pretrained_model=pretrained_model,
-                  max_iters=args.max_iters, n_cpu_threads=args.n_cpu_threads)
-    else:
-        train_net(network, imdb, roidb, output_dir,
-              pretrained_model=pretrained_model,
-              max_iters=args.max_iters)
+              max_iters=args.max_iters, n_cpu_threads=args.n_cpu_threads)

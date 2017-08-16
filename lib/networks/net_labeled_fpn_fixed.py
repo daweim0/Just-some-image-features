@@ -4,7 +4,8 @@ from fcn.config import cfg
 
 
 """ A network that produces dense features. 
-This particular network was heavily inspired by 'Feature Pyramid Networks for Object Detection'
+This particular network was heavily inspired by 'Feature Pyramid Networks for Object Detection' and adhere's more
+closely to the paper than net_labeled_fpn.py
 """
 
 
@@ -56,6 +57,7 @@ class custom_network(Network):
     def setup(self):
         trainable = self.trainable
         reuse = True
+        feature_len = 128
 
         # scaled versions of ground truth
         (self.feed('gt_flow')
@@ -126,45 +128,48 @@ class custom_network(Network):
 
         # 16x scaling input
         (self.feed('conv5_3_l')
-         .conv(1, 1, 64, 1, 1, name='16_conv_1', c_i=512, elu=True)
+         .conv(1, 1, feature_len, 1, 1, name='16_conv_1', c_i=512, elu=True)
          # .conv(1, 1, 128, 1, 1, name='16_conv_2', c_i=128, elu=True, reuse=reuse)
          .add_immediate(tf.constant(0.0, tf.float32), name='features_16x_l')
-         .deconv(4, 4, 64, 2, 2, name='upscale_16x_l', trainable=False))
+         .deconv(4, 4, feature_len, 2, 2, name='upscale_16x_l', trainable=False))
 
         # 8x scaling input
         (self.feed('conv4_3_l')
-         .conv(1, 1, 64, 1, 1, name='8x_skip_cov_1', c_i=512, relu=False)
+         .conv(1, 1, feature_len, 1, 1, name='8x_skip_cov_1', c_i=512, relu=False)
          .add_immediate(tf.constant(0.0, tf.float32), name='skip_link_8x_l'))
         (self.feed('upscale_16x_l', 'skip_link_8x_l')
          .add(name='8_add')
          .add_immediate(tf.constant(0.0, tf.float32), name='features_8x_l')
-         .deconv(4, 4, 64, 2, 2, name='upscale_8x_l', trainable=False))
+         .conv(3, 3, feature_len, 1, 1, name='8x_conv_2', relu=False)
+         .deconv(4, 4, feature_len, 2, 2, name='upscale_8x_l', trainable=False))
 
         # 4x scaling input
         (self.feed('conv3_l')
-         .conv(1, 1, 64, 1, 1, name='4x_skip_cov_1', c_i=256, relu=False)
+         .conv(1, 1, feature_len, 1, 1, name='4x_skip_cov_1', c_i=256, relu=False)
          .add_immediate(tf.constant(0.0, tf.float32), name='skip_link_4x_l'))
         (self.feed('upscale_8x_l', 'skip_link_4x_l')
          .add(name='4_add')
          .add_immediate(tf.constant(0.0, tf.float32), name='features_4x_l')
-         .deconv(4, 4, 64, 2, 2, name='upscale_4x_l', trainable=False))
+         .conv(3, 3, feature_len, 1, 1, name='4x_conv_2', relu=False)
+         .deconv(4, 4, feature_len, 2, 2, name='upscale_4x_l', trainable=False))
 
         # 2x scaling input
         (self.feed('conv2_l')
-         .conv(1, 1, 64, 1, 1, name='2x_skip_cov_1', c_i=128, relu=False)
+         .conv(1, 1, feature_len, 1, 1, name='2x_skip_cov_1', c_i=128, relu=False)
          .add_immediate(tf.constant(0.0, tf.float32), name='skip_link_2x_l'))
         (self.feed('upscale_4x_l', 'skip_link_2x_l')
          .add(name='2_add')
          .add_immediate(tf.constant(0.0, tf.float32), name='features_2x_l')
-         .deconv(4, 4, 64, 2, 2, name='upscale_2x_l', trainable=False))
+         .conv(3, 3, feature_len, 1, 1, name='2x_conv_2', relu=False)
+         .deconv(4, 4, feature_len, 2, 2, name='upscale_2x_l', trainable=False))
 
-        # 1x scaling input
-        (self.feed('conv1_l')
-         .conv(1, 1, 64, 1, 1, name='1x_skip_cov_1', c_i=64, relu=False)
-         .add_immediate(tf.constant(0.0, tf.float32), name='skip_link_1x_l'))
-        (self.feed('upscale_2x_l', 'skip_link_1x_l')
-         .add(name='1_add')
-         .add_immediate(tf.constant(0.0, tf.float32), name='features_1x_l'))
+        # # 1x scaling input
+        # (self.feed('conv1_l')
+        #  .conv(1, 1, feature_len, 1, 1, name='1x_skip_cov_1', c_i=64, relu=False)
+        #  .add_immediate(tf.constant(0.0, tf.float32), name='skip_link_1x_l'))
+        # (self.feed('upscale_2x_l', 'skip_link_1x_l')
+        #  .add(name='1_add')
+        #  .add_immediate(tf.constant(0.0, tf.float32), name='features_1x_l'))
 
 
         # right tower
@@ -195,62 +200,81 @@ class custom_network(Network):
 
         # 16x scaling input
         (self.feed('conv5_3_r')
-         .conv(1, 1, 64, 1, 1, name='16_conv_1', c_i=512, elu=True, reuse=reuse)
+         .conv(1, 1, feature_len, 1, 1, name='16_conv_1', c_i=512, elu=True, reuse=reuse)
          # .conv(1, 1, 128, 1, 1, name='16_conv_2', c_i=128, elu=True, reuse=reuse)
          .add_immediate(tf.constant(0.0, tf.float32), name='features_16x_r')
-         .deconv(4, 4, 64, 2, 2, name='upscale_16x_r', trainable=False))
+         .deconv(4, 4, feature_len, 2, 2, name='upscale_16x_r', trainable=False))
 
         # 8x scaling input
         (self.feed('conv4_3_r')
-         .conv(1, 1, 64, 1, 1, name='8x_skip_cov_1', c_i=512, relu=False, reuse=reuse)
+         .conv(1, 1, feature_len, 1, 1, name='8x_skip_cov_1', c_i=512, relu=False, reuse=reuse)
          .add_immediate(tf.constant(0.0, tf.float32), name='skip_link_8x_r'))
         (self.feed('upscale_16x_r', 'skip_link_8x_r')
          .add(name='8_add')
          .add_immediate(tf.constant(0.0, tf.float32), name='features_8x_r')
-         .deconv(4, 4, 64, 2, 2, name='upscale_8x_r', trainable=False))
+         .conv(3, 3, feature_len, 1, 1, name='8x_conv_2', relu=False, reuse=reuse)
+         .deconv(4, 4, feature_len, 2, 2, name='upscale_8x_r', trainable=False))
 
         # 4x scaling input
         (self.feed('conv3_r')
-         .conv(1, 1, 64, 1, 1, name='4x_skip_cov_1', c_i=256, relu=False, reuse=reuse)
+         .conv(1, 1, feature_len, 1, 1, name='4x_skip_cov_1', c_i=256, relu=False, reuse=reuse)
          .add_immediate(tf.constant(0.0, tf.float32), name='skip_link_4x_r'))
         (self.feed('upscale_8x_r', 'skip_link_4x_r')
          .add(name='4_add')
          .add_immediate(tf.constant(0.0, tf.float32), name='features_4x_r')
-         .deconv(4, 4, 64, 2, 2, name='upscale_4x_r', trainable=False))
+         .conv(3, 3, feature_len, 1, 1, name='4x_conv_2', relu=False, reuse=reuse)
+         .deconv(4, 4, feature_len, 2, 2, name='upscale_4x_r', trainable=False))
 
         # 2x scaling input
         (self.feed('conv2_r')
-         .conv(1, 1, 64, 1, 1, name='2x_skip_cov_1', c_i=128, relu=False, reuse=reuse)
+         .conv(1, 1, feature_len, 1, 1, name='2x_skip_cov_1', c_i=128, relu=False, reuse=reuse)
          .add_immediate(tf.constant(0.0, tf.float32), name='skip_link_2x_r'))
         (self.feed('upscale_4x_r', 'skip_link_2x_r')
          .add(name='2_add')
          .add_immediate(tf.constant(0.0, tf.float32), name='features_2x_r')
-         .deconv(4, 4, 64, 2, 2, name='upscale_2x_r', trainable=False))
+         .conv(3, 3, feature_len, 1, 1, name='2x_conv_2', relu=False, reuse=reuse)
+         .deconv(4, 4, feature_len, 2, 2, name='upscale_2x_r', trainable=False))
 
-        # 1x scaling input
-        (self.feed('conv1_r')
-         .conv(1, 1, 64, 1, 1, name='1x_skip_cov_1', c_i=64, relu=False, reuse=reuse)
-         .add_immediate(tf.constant(0.0, tf.float32), name='skip_link_1x_r'))
-        (self.feed('upscale_2x_r', 'skip_link_1x_r')
-         .add(name='1_add')
-         .add_immediate(tf.constant(0.0, tf.float32), name='features_1x_r'))
+        # # 1x scaling input
+        # (self.feed('conv1_r')
+        #  .conv(1, 1, feature_len, 1, 1, name='1x_skip_cov_1', c_i=64, relu=False, reuse=reuse)
+        #  .add_immediate(tf.constant(0.0, tf.float32), name='skip_link_1x_r'))
+        # (self.feed('upscale_2x_r', 'skip_link_1x_r')
+        #  .add(name='1_add')
+        #  .add_immediate(tf.constant(0.0, tf.float32), name='features_1x_r'))
+
+        self.feed('upscale_2x_l')
+        self.add_immediate(tf.constant(0.0, tf.float32), name='features_1x_l')
+        self.feed('upscale_2x_r')
+        self.add_immediate(tf.constant(0.0, tf.float32), name='features_1x_r')
 
 
         with tf.device("/cpu:0"):
             # triplet loss
-            (self.feed(['features_1x_l', 'features_1x_r', 'gt_flow', 'occluded', 'left_labels', 'right_labels'])
-             .triplet_flow_loss(margin=1.0, negative_radius=2, positive_radius=1, name="triplet_loss_1x"))
+            # (self.feed(['features_1x_l', 'features_1x_r', 'gt_flow', 'occluded', 'left_labels', 'right_labels'])
+            #  .triplet_flow_loss(margin=1.0, negative_radius=2, positive_radius=1, name="triplet_loss_1x"))
 
             (self.feed(['features_2x_l', 'features_2x_r', 'gt_flow_2x', 'occluded_2x', 'left_labels_2x', 'right_labels_2x'])
              .triplet_flow_loss(margin=1.0, negative_radius=2, positive_radius=1, name="triplet_loss_2x"))
 
-            (self.feed(['features_4x_l', 'features_4x_r', 'gt_flow_4x', 'occluded_4x', 'left_labels_4x', 'right_labels_4x'])
-             .triplet_flow_loss(margin=1.0, negative_radius=4, positive_radius=2, name="triplet_loss_4x"))
+            # (self.feed(['features_4x_l', 'features_4x_r', 'gt_flow_4x', 'occluded_4x', 'left_labels_4x', 'right_labels_4x'])
+            #  .triplet_flow_loss(margin=1.0, negative_radius=4, positive_radius=2, name="triplet_loss_4x"))
+            #
+            # (self.feed(['features_8x_l', 'features_8x_r', 'gt_flow_8x', 'occluded_8x', 'left_labels_8x', 'right_labels_8x'])
+            #  .triplet_flow_loss(margin=1.0, negative_radius=5, positive_radius=2, name="triplet_loss_8x"))
+            #
+            # final_output = (self.get_output('triplet_loss_8x')[0] + self.get_output('triplet_loss_2x')[0] +
+            #                 self.get_output('triplet_loss_4x')[0] + self.get_output('triplet_loss_1x')[0]) / 4.0
 
-            (self.feed(['features_8x_l', 'features_8x_r', 'gt_flow_8x', 'occluded_8x', 'left_labels_8x', 'right_labels_8x'])
-             .triplet_flow_loss(margin=1.0, negative_radius=5, positive_radius=2, name="triplet_loss_8x"))
-
-            final_output = (self.get_output('triplet_loss_8x')[0] + self.get_output('triplet_loss_2x')[0] +
-                            self.get_output('triplet_loss_4x')[0] + self.get_output('triplet_loss_1x')[0]) / 4.0
+            final_output = self.get_output('triplet_loss_2x')[0]
 
             self.layers["final_triplet_loss"] = [final_output]
+
+
+#        (self.feed(['features_8x_l', 'features4x_l', 'features_2x_l', 'features_1x_l'])
+#        .concat(axis=3, name="final_features_l_out"))
+#
+#        (self.feed(['features_8x_r', 'features4x_r', 'features_2x_r', 'features_1x_r'])
+#        .concat(axis=3, name="final_features_r_out"))
+
+        pass
