@@ -3651,7 +3651,7 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
  * 
  *                 if best_index_u != -1:             # <<<<<<<<<<<<<<
  *                     set_flow_at_point(i, j, best_index_v - j, best_index_u - i, flow_arr)
- *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_v - j, <int> best_index_u - i, feature_depth)
+ *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
  */
                                 __pyx_t_11 = ((__pyx_v_best_index_u != -1.0) != 0);
                                 if (__pyx_t_11) {
@@ -3660,7 +3660,7 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
  * 
  *                 if best_index_u != -1:
  *                     set_flow_at_point(i, j, best_index_v - j, best_index_u - i, flow_arr)             # <<<<<<<<<<<<<<
- *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_v - j, <int> best_index_u - i, feature_depth)
+ *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
  *                 else:
  */
                                   __pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_set_flow_at_point(__pyx_v_i, __pyx_v_j, (__pyx_v_best_index_v - __pyx_v_j), (__pyx_v_best_index_u - __pyx_v_i), __pyx_v_flow_arr);
@@ -3668,26 +3668,26 @@ static PyObject *__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_compu
                                   /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":130
  *                 if best_index_u != -1:
  *                     set_flow_at_point(i, j, best_index_v - j, best_index_u - i, flow_arr)
- *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_v - j, <int> best_index_u - i, feature_depth)             # <<<<<<<<<<<<<<
+ *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)             # <<<<<<<<<<<<<<
  *                 else:
  *                     set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
  */
                                   __pyx_t_23 = __pyx_v_i;
                                   __pyx_t_24 = __pyx_v_j;
-                                  *((float *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_feature_errors.data + __pyx_t_23 * __pyx_v_feature_errors.strides[0]) ) + __pyx_t_24 * __pyx_v_feature_errors.strides[1]) )) = ((float)__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, (((int)__pyx_v_best_index_v) - __pyx_v_j), (((int)__pyx_v_best_index_u) - __pyx_v_i), __pyx_v_feature_depth));
+                                  *((float *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_feature_errors.data + __pyx_t_23 * __pyx_v_feature_errors.strides[0]) ) + __pyx_t_24 * __pyx_v_feature_errors.strides[1]) )) = ((float)__pyx_f_17triplet_flow_loss_27slow_flow_calculator_cython_dist(__pyx_v_left_features, __pyx_v_right_features, __pyx_v_i, __pyx_v_j, ((int)__pyx_v_best_index_u), ((int)__pyx_v_best_index_v), __pyx_v_feature_depth));
 
                                   /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":128
  *                     #     printf("i %3i, j, %3i, v1 %2i, v2 %2i, best_index_u %2.1f, dist1 %3.2f,\t dist2 %3.2f,\t best_index_v %3.1lf\n", i, j, v1, v2, best_index_u, dist1, dist2, best_index_v)
  * 
  *                 if best_index_u != -1:             # <<<<<<<<<<<<<<
  *                     set_flow_at_point(i, j, best_index_v - j, best_index_u - i, flow_arr)
- *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_v - j, <int> best_index_u - i, feature_depth)
+ *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
  */
                                   goto __pyx_L25;
                                 }
 
                                 /* "triplet_flow_loss/slow_flow_calculator_cython.pyx":132
- *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_v - j, <int> best_index_u - i, feature_depth)
+ *                     feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
  *                 else:
  *                     set_flow_at_point(i, j, 0.0, 0.0, flow_arr)             # <<<<<<<<<<<<<<
  * 

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-clear
 TF_INC=$(python -c 'import tensorflow as tf; print(tf.sysconfig.get_include())')
 echo $TF_INC
 

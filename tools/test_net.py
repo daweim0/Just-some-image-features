@@ -20,6 +20,15 @@ import os, sys
 import tensorflow as tf
 import os.path as osp
 
+
+def str_to_bool(val):
+    # (str) -> bool
+    if val in {'True', 'true', 'yes', 'y', 't'}:
+        return True
+    else:
+        return False
+
+
 def parse_args():
     """
     Parse input arguments
@@ -32,8 +41,9 @@ def parse_args():
     parser.add_argument('--imdb', dest='imdb_name', help='dataset to test', default=None, type=str)
     parser.add_argument('--network', dest='network_name', help='name of the network', default=None, type=str)
     parser.add_argument('--n_cpu_threads', dest='n_cpu_threads', help='passed to tensorflow', default=10, type=int)
-    parser.add_argument('--show_correspondence', dest='show_correspondence', help='draw lines between corresponding points', type=bool)
-    parser.add_argument('--calc_EPE_all', dest='calc_EPE_all', help='calculate EPE for all testing data', type=bool)
+    parser.add_argument('--show_correspondence', dest='show_correspondence', help='draw lines between corresponding points', type=str_to_bool)
+    parser.add_argument('--calc_EPE_all', dest='calc_EPE_all', help='calculate EPE for all testing data', type=str_to_bool)
+    parser.add_argument('--save_images', dest='save_images', help='calculate EPE for all testing data', type=str_to_bool)
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -90,5 +100,6 @@ if __name__ == '__main__':
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True, intra_op_parallelism_threads=args.n_cpu_threads))
     saver.restore(sess, args.model)
 
-    test_flow_net(sess, network, imdb, weights_filename, show_arrows=args.show_correspondence, calculate_EPE_all_data=args.calc_EPE_all)
+    test_flow_net(sess, network, imdb, weights_filename, save_image=args.save_images,
+                  show_arrows=args.show_correspondence, calculate_EPE_all_data=args.calc_EPE_all)
 

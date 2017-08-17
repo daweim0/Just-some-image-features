@@ -127,7 +127,7 @@ cdef compute_flow_helper(np.ndarray[np.float32_t, ndim=3] left_features_obj,
 
                 if best_index_u != -1:
                     set_flow_at_point(i, j, best_index_v - j, best_index_u - i, flow_arr)
-                    feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_v - j, <int> best_index_u - i, feature_depth)
+                    feature_errors[i, j] = <float> dist(left_features, right_features, i, j, <int> best_index_u, <int> best_index_v, feature_depth)
                 else:
                     set_flow_at_point(i, j, 0.0, 0.0, flow_arr)
 

@@ -9,7 +9,7 @@ core
 *.jpg
 *.bmp
 *.ckpt.*
-*.py~
+*~
 *.html
 output/*
 lib/icp/icp_main.cpp
