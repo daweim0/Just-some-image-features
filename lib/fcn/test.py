@@ -22,7 +22,7 @@ from gt_lov_synthetic_layer.layer import GtLOVSyntheticLayer
 import scipy.ndimage
 import triplet_flow_loss.run_slow_flow_calculator_process
 
-# test.py should still be importable even if pyperclip is not installed
+# pyperclip might not be installed and this code shouldn't fail if it isn't
 try:
     import pyperclip
 except:
@@ -107,7 +107,7 @@ def test_flow_net(sess, net, imdb, weights_filename, save_image=False, calculate
         occluded_pyramid = [np.squeeze(results[4])]
         # occluded_pyramid = [np.zeros(np.squeeze(results[4]).shape, dtype=np.int32)]
         scale_factor = 2
-        search_radius = 400
+        search_radius = 600
         left_pyramid_scaled = [scipy.ndimage.zoom(left_pyramid[0], [1./scale_factor, 1./scale_factor, 1], order=1)]
         right_pyramid_scaled = [scipy.ndimage.zoom(right_pyramid[0], [1./scale_factor, 1./scale_factor, 1], order=1)]
         occluded_pyramid_scaled = [scipy.ndimage.zoom(occluded_pyramid[0], [1./scale_factor, 1./scale_factor], order=1).astype(np.int32)]
@@ -161,7 +161,7 @@ def test_flow_net(sess, net, imdb, weights_filename, save_image=False, calculate
                 class_epe_set[blobs['roidb'][0]['video_id']] = list([average_EPE, 1])
             print blobs['roidb'][0]['video_id'], class_epe_set[blobs['roidb'][0]['video_id']]
         else:
-            global iiiiii, x_plots, y_plots, axes_left_list, axes_right_list, fig
+            global iiiiii, x_plots, y_plots, axes_left_list, axes_right_list, fig  # using a global variable probably isn't the best here, but it works.
             fig = plt.figure(figsize=(12.0, 9.0))
             iiiiii = 1
             axes_left_list = list()
@@ -171,31 +171,62 @@ def test_flow_net(sess, net, imdb, weights_filename, save_image=False, calculate
                 x_plots = 1
                 y_plots = 2
 
-                lr_arr = np.concatenate([left_blob[0], right_blob[0]], axis=1)
-                lr_img = fix_rgb_image(lr_arr)
+                # crop the images so they aren't quite as tiny
+                left_im = fix_rgb_image(left_blob[0])
+                right_im = fix_rgb_image(right_blob[0])
+
+                # left_coords = np.argwhere(np.sum(left_labels_blob[0], axis=2) > 0)
+                # right_coords = np.argwhere(np.sum(right_labels_blob[0], axis=2) > 0)
+                #
+                # x0, y0 = np.min([right_coords.min(axis=0), left_coords.min(axis=0)], axis=0)
+                # x1, y1 = np.max([right_coords.max(axis=0), left_coords.max(axis=0)], axis=0) + 1
+                # x0 = np.max([x0 - 20, 0])
+                # y0 = np.max([y0 - 20, 0])
+                # x1 = np.min([x1 + 20, left_im.shape[0]])
+                # y1 = np.min([y1 + 20, left_im.shape[1]])
+                #
+                # left_im = left_im[x0:x1, y0:y1]
+                # right_im = right_im[x0:x1, y0:y1]
+                #
+                # left_labels = left_labels_blob[0][x0:x1, y0:y1, 1:]
+                # occluded = occluded_blob[0][x0:x1, y0:y1, 0]
+                # gt_flow_ = gt_flow[x0:x1, y0:y1, :]
+                # predicted_flow_ = predicted_flow[x0:x1, y0:y1, :]
+
+                left_im = left_im
+                right_im = right_im
+
+                left_labels = left_labels_blob[0]
+                occluded = occluded_blob[0][:, :, 0]
+                gt_flow_ = gt_flow
+                predicted_flow_ = predicted_flow
+
+
+                lr_arr = np.concatenate([left_im, right_im], axis=1)
+                lr_img = lr_arr
                 ax1 = fig.add_subplot(y_plots, x_plots, iiiiii)
                 ax1.imshow(lr_img)
                 ax1.set_title("left image, right image")
                 iiiiii += 1
 
-                flow_arr = np.concatenate([gt_flow, predicted_flow], axis=1)
+                flow_arr = np.concatenate([gt_flow_, predicted_flow_], axis=1)
                 flow_img = sintel_utils.sintel_compute_color(flow_arr)
                 ax2 = fig.add_subplot(y_plots, x_plots, iiiiii)
                 ax2.imshow(flow_img, )
                 ax2.set_title("gt flow, predicted flow")
                 iiiiii += 1
 
-                label_arr = np.sum(left_labels_blob[0][:, :, 1:], axis=2)  # gets rid of background
-                occluded = occluded_blob[0][:, :, 0]  # to get rid of len one dimension on the end
-                n_arrows = 10
+                label_arr = np.sum(left_labels, axis=2)  # gets rid of background
+                # occluded = occluded[0][:, :, 0]  # to get rid of len one dimension on the end
+                n_arrows = 8
                 spacing = int(np.sqrt(np.count_nonzero((1 - occluded) * label_arr) / n_arrows))
-                for x in range(0, gt_flow.shape[1], spacing):
-                    for y in range(int((x * 0.29) % (spacing / 2)), gt_flow.shape[0], spacing):
-                        x_ = max(0, min(x + random.randint(-1 * spacing / 4, spacing / 4), gt_flow.shape[1] - 1))
-                        y_ = max(0, min(y + random.randint(-1 * spacing / 4, spacing / 4), gt_flow.shape[0] - 1))
+                for x in range(0, gt_flow_.shape[1], spacing):
+                    for y in range(int((x * 0.29) % (spacing / 2)), gt_flow_.shape[0], spacing):
+                        x_ = max(0, min(x + random.randint(-1 * spacing / 4, spacing / 4), gt_flow_.shape[1] - 1))
+                        y_ = max(0, min(y + random.randint(-1 * spacing / 4, spacing / 4), gt_flow_.shape[0] - 1))
                         if occluded[y_, x_] == 0 and label_arr[y_, x_] != 0:
-                            r_offset = predicted_flow[y_, x_]
-                            r_offset[0] += int(gt_flow.shape[1]) + x_
+                            r_offset = predicted_flow_[y_, x_]
+                            r_offset[0] += int(gt_flow_.shape[1]) + x_
                             r_offset[1] += y_
 
                             color = np.random.rand(3, )
@@ -234,6 +265,7 @@ def test_flow_net(sess, net, imdb, weights_filename, save_image=False, calculate
                 gt_flow_plot_position = iiiiii
                 iiiiii += 1
 
+                predicted_flow_ = predicted_flow[x0:x1, y0:y1, :]
                 computed_flows_plot_positions = list()
                 computed_flows_color_square = list()
                 computed_flows_raw_color = list()
@@ -442,7 +474,7 @@ def test_flow_net(sess, net, imdb, weights_filename, save_image=False, calculate
 
                 fig.canvas.mpl_connect('key_press_event', get_handle_key_press(feature_ax_list))
 
-            fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image'].split("/")[-2:]) + "  right image: " +
+            fig.suptitle("Left Image: " + str(blobs['roidb'][0]['image'].split("/")[-2:]) + "  \nright image: " +
                          str(blobs['roidb'][0]['image_right'].split("/")[-2:]) + " triplet_loss:" + str(
                         results[3][0]) + " EPE:" + str(average_EPE))
 

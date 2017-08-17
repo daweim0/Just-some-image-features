@@ -1,6 +1,8 @@
 # Some Possibly Overkill Image Features
 
-This code trains dense image features then computes optical flow using them (dense features are a primary goal, optical flow is just a metric).
+This code trains dense image features then computes optical flow and image correspondence using them (dense features are a primary goal, optical flow is just a metric). It was heavily built out of Yu Xiang's project [DA-RNN](https://github.com/yuxng/DA-RNN).
+
+Testing data and a trained model can be downloaded [here](https://drive.google.com/file/d/0B0ANYo6Rw6Jxci04WC1lZWFlOG8/view?usp=sharing).
 
 This hopefully won't become the dumping ground of a dead thing.
 
