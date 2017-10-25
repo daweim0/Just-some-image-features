@@ -36,6 +36,22 @@ cd lib/gt_lov_synthetic_layer && ./build_cython.sh && cd ../..
     ```
   (or you can use your own checkpoints)
 
+### Sample Output
+
+The following images show optical flow calculated by a nearest neighbor search on image feature maps, individually taking every pixel in the left image and looking for the most similar pixel in the right image. The visualization is direct output from the nearest neighbor search, **no post-processing or smoothing** has been done (since the point is to demonstrate how discriminative the features are, not fancy optical flow algorithms).
+
+![Some output](https://raw.githubusercontent.com/daweim0/Just-some-image-features/more_comments/plot_21.png)
+
+![Some output](https://raw.githubusercontent.com/daweim0/Just-some-image-features/more_comments/plot_28.png)
+
+![Some output](https://raw.githubusercontent.com/daweim0/Just-some-image-features/more_comments/plot_57.png)
+
+![Some output](https://raw.githubusercontent.com/daweim0/Just-some-image-features/more_comments/plot_59.png)
+
+![Some output](https://raw.githubusercontent.com/daweim0/Just-some-image-features/more_comments/plot_62.png)
+
+![Some output](https://raw.githubusercontent.com/daweim0/Just-some-image-features/more_comments/plot_64.png)
+
 ### License
 
 This code is released under the MIT License (refer to the LICENSE file for details).
