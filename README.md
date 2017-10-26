@@ -1,8 +1,8 @@
-# Some In-progress Possibly Overkill Dense Image Features
+# Some Possibly Overkill Dense Image Features
 
-This code trains dense image features then computes optical flow and image correspondence using them (dense features are a primary goal, optical flow is just a metric). It was built out of Yu Xiang's code base [DA-RNN](https://github.com/yuxng/DA-RNN).
+This code trains dense image features then computes optical flow and image correspondence using them (dense features are a primary goal, optical flow is just a metric). It was built out of Yu Xiang's [DA-RNN](https://github.com/yuxng/DA-RNN) code base.
 
-This project is by no means done. I started it while spending the summer after freshman year in the University of Washington's Robotics and State Estimation Lab and stopped working on it when classes started. Hopefully I'll come back to it some day.
+This project is by no means done. The infastructure to train and test models on multiple datasets is completed, as well as trained models that perform reasonably well. The next steps at this point are investigating better losses to use when training and creating a high quality real world datasets (our best modesl were trained on synthetic data (although they do transfer to real world data pretty well)).
 
 Testing data and a trained model can be downloaded [here](https://drive.google.com/file/d/0B0ANYo6Rw6Jxci04WC1lZWFlOG8/view?usp=sharing).
 
